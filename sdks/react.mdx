@@ -1,0 +1,156 @@
+---
+title: "React SDK"
+description: "Documentación del SDK de React para Camarauth"
+---
+
+# React SDK
+
+SDK oficial de React para integrar autenticación por WhatsApp en tus aplicaciones web.
+
+## Instalación
+
+```bash
+npm install @camarauth/sdk
+```
+
+## Características
+
+- ⚛️ **Hooks React** - Integración nativa con React
+- 📘 **TypeScript** - Tipos completos incluidos
+- 🔄 **WebSocket** - Comunicación en tiempo real
+- ⏱️ **Auto-regeneración** - PINs se regeneran automáticamente
+- 💾 **Storage** - Persistencia de sesión opcional
+- 📱 **Responsive** - Funciona en móvil y desktop
+
+## Hooks disponibles
+
+```typescript
+import {
+  usePinAuth,
+  usePinGenerator,
+  useCountdown,
+  useAutoRegeneration,
+} from "@camarauth/sdk/react";
+```
+
+## Uso básico
+
+```tsx
+import { usePinAuth } from "@camarauth/sdk/react";
+
+function LoginPage() {
+  const auth = usePinAuth({
+    apiUrl: "http://localhost:3001",
+    whatsappNumber: "+1234567890",
+    onSuccess: (user) => {
+      console.log("Autenticado:", user);
+      // Redirigir al dashboard
+    },
+  });
+
+  return (
+    <div>
+      {!auth.pin ? (
+        <button onClick={auth.generate}>Generar código de acceso</button>
+      ) : (
+        <div>
+          <p>{auth.emojis.join(" ")}</p>
+          <p>Expira en: {auth.formattedTime}</p>
+          <img src={auth.qrCodeUrl} alt="QR" />
+          <a href={auth.whatsappLink}>Abrir WhatsApp</a>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+## Documentación
+
+- [Guía de inicio rápido](/quickstart)
+- [Documentación de React](/react/overview)
+- [Hooks](/react/hooks/use-pin-auth)
+- [Interfaces](/react/interfaces/pin-auth-options)
+
+## Ejemplo completo
+
+```tsx
+import { usePinAuth } from "@camarauth/sdk/react";
+
+function AuthModal({ onClose }: { onClose: () => void }) {
+  const auth = usePinAuth({
+    apiUrl: import.meta.env.VITE_CAMARAUTH_API_URL,
+    whatsappNumber: import.meta.env.VITE_WHATSAPP_NUMBER,
+    autoGenerate: true,
+    onSuccess: (user) => {
+      localStorage.setItem("user", JSON.stringify(user));
+      onClose();
+    },
+    onError: (error) => {
+      console.error("Error de autenticación:", error);
+    },
+  });
+
+  return (
+    <div className="auth-modal">
+      <div className="auth-content">
+        {auth.status === "success" ? (
+          <div className="success">
+            <h2>¡Bienvenido {auth.user?.name}!</h2>
+            <p>Autenticación exitosa</p>
+          </div>
+        ) : (
+          <>
+            <h2>Iniciar sesión</h2>
+
+            {auth.isLoading && <p>Conectando...</p>}
+
+            {auth.pin && (
+              <>
+                <div className="emojis-container">
+                  {auth.emojis.map((emoji, i) => (
+                    <span key={i} className="emoji">
+                      {emoji}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="timer">Expira en: {auth.formattedTime}</div>
+
+                {auth.qrCodeUrl && (
+                  <img
+                    src={auth.qrCodeUrl}
+                    alt="Escanea para WhatsApp"
+                    className="qr-code"
+                  />
+                )}
+
+                <a
+                  href={auth.whatsappLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="whatsapp-button"
+                >
+                  📱 Abrir WhatsApp
+                </a>
+
+                <button onClick={auth.cancel}>Cancelar</button>
+              </>
+            )}
+
+            {auth.error && <div className="error">{auth.error.message}</div>}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+## Repositorio
+
+[github.com/camarauth/camarauth-sdk](https://github.com/camarauth/camarauth-sdk)
+
+## Licencia
+
+MIT © [Camarauth](https://camarauth.com)

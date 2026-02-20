@@ -1,0 +1,111 @@
+---
+title: "usePinGenerator"
+description: "Hook para generación de PINs en React"
+---
+
+# usePinGenerator
+
+Hook para generar PINs aleatorios y codificarlos en emojis.
+
+## Uso
+
+```typescript
+import { usePinGenerator } from '@camarauth/sdk/react';
+
+function PinDisplay() {
+  const { pin, emojis, emojiString, regenerate } = usePinGenerator({
+    length: 6
+  });
+
+  return (
+    <div>
+      <p>PIN: {pin}</p>
+      <p>Emojis: {emojiString}</p>
+      <button onClick={regenerate}>Regenerar</button>
+    </div>
+  );
+}
+```
+
+## Parámetros
+
+<ParamField path="options" type="PinGeneratorOptions">
+  Opciones de generación
+</ParamField>
+
+### PinGeneratorOptions
+
+<ParamField path="length" type="number" default="6">
+  Longitud del PIN
+</ParamField>
+
+<ParamField path="characters" type="string">
+  Caracteres permitidos (por defecto: A-Z, 0-9)
+</ParamField>
+
+## Valor de retorno
+
+<ResponseField name="pin" type="string">
+  PIN generado
+</ResponseField>
+
+<ResponseField name="emojis" type="string[]">
+  Array de emojis codificados
+</ResponseField>
+
+<ResponseField name="emojiString" type="string">
+  PIN como string de emojis
+</ResponseField>
+
+<ResponseField name="regenerate" type="() => PinGenerationResult">
+  Función para generar nuevo PIN
+</ResponseField>
+
+## Ejemplo
+
+```tsx
+import { usePinGenerator } from '@camarauth/sdk/react';
+
+function CustomAuth() {
+  const { pin, emojis, emojiString, regenerate } = usePinGenerator({
+    length: 8,
+    characters: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  });
+
+  const handleShare = () => {
+    // Compartir emojis por WhatsApp
+    const message = `Mi PIN es: ${emojiString}`;
+    const whatsappLink = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappLink, '_blank');
+  };
+
+  return (
+    <div className="pin-generator">
+      <div className="emojis-display">
+        {emojis.map((emoji, index) => (
+          <span key={index} className="emoji">{emoji}</span>
+        ))}
+      </div>
+      
+      <p className="pin-hint">
+        Tu código: {pin}
+      </p>
+      
+      <div className="actions">
+        <button onClick={regenerate}>
+          🔄 Nuevo código
+        </button>
+        
+        <button onClick={handleShare}>
+          📱 Compartir
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+## Véase también
+
+- [usePinAuth](/react/hooks/use-pin-auth)
+- [PinGeneratorOptions interface](/react/interfaces/pin-generator-options)

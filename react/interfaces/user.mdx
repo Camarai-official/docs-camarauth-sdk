@@ -1,0 +1,196 @@
+---
+title: "User"
+description: "Interface del usuario autenticado"
+---
+
+# User
+
+Interface que representa un usuario autenticado.
+
+## Propiedades
+
+### id
+
+Identificador único del usuario.
+
+```typescript
+id: string;
+```
+
+**Ejemplo:**
+
+```typescript
+"123";
+"user_456";
+"550e8400-e29b-41d4-a716-446655440000";
+```
+
+### name
+
+Nombre del usuario.
+
+```typescript
+name: string;
+```
+
+**Ejemplo:**
+
+```typescript
+"Juan";
+"María";
+```
+
+### surname
+
+Apellidos del usuario (opcional).
+
+```typescript
+surname?: string
+```
+
+**Ejemplo:**
+
+```typescript
+"Pérez García";
+"López Martínez";
+```
+
+### phone
+
+Número de teléfono del usuario.
+
+```typescript
+phone: string;
+```
+
+**Ejemplo:**
+
+```typescript
+"+1234567890";
+"+34612345678";
+```
+
+### email
+
+Email del usuario (opcional).
+
+```typescript
+email?: string
+```
+
+**Ejemplo:**
+
+```typescript
+"juan@example.com";
+```
+
+### roles
+
+Array de roles del usuario.
+
+```typescript
+roles: string[]
+```
+
+**Ejemplo:**
+
+```typescript
+["user"][("user", "admin")][("customer", "premium")];
+```
+
+## Propiedades adicionales
+
+El objeto User puede incluir propiedades adicionales según tu base de datos:
+
+```typescript
+interface User {
+  id: string;
+  name: string;
+  surname?: string;
+  phone: string;
+  email?: string;
+  roles: string[];
+
+  // Propiedades opcionales adicionales
+  avatar?: string;
+  foto?: string;
+  createdAt?: string;
+  updatedAt?: string;
+
+  // Campos personalizados de tu DB
+  [key: string]: any;
+}
+```
+
+## Ejemplo de uso
+
+```tsx
+import { usePinAuth } from "@camarauth/sdk/react";
+
+function UserProfile() {
+  const auth = usePinAuth({
+    apiUrl: "http://localhost:3001",
+    whatsappNumber: "+1234567890",
+  });
+
+  if (!auth.user) {
+    return <div>No autenticado</div>;
+  }
+
+  const { user } = auth;
+
+  return (
+    <div className="user-profile">
+      <h2>
+        {user.name} {user.surname}
+      </h2>
+      <p>Teléfono: {user.phone}</p>
+      {user.email && <p>Email: {user.email}</p>}
+
+      <div className="roles">
+        {user.roles.map((role) => (
+          <span key={role} className="role-badge">
+            {role}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+## Guardar en localStorage
+
+```typescript
+auth.onSuccess = (user) => {
+  // Guardar usuario
+  localStorage.setItem("user", JSON.stringify(user));
+
+  // Guardar token si existe
+  if (user.token) {
+    localStorage.setItem("token", user.token);
+  }
+};
+
+// Recuperar usuario
+const savedUser = JSON.parse(localStorage.getItem("user") || "null");
+```
+
+## Verificar roles
+
+```typescript
+function hasRole(user: User, role: string): boolean {
+  return user.roles.includes(role);
+}
+
+// Uso
+if (hasRole(user, "admin")) {
+  // Mostrar panel de admin
+}
+```
+
+## Véase también
+
+- [usePinAuth hook](/react/hooks/use-pin-auth)
+- [PinAuthOptions interface](/react/interfaces/pin-auth-options)
+- [PinAuthState interface](/react/interfaces/pin-auth-state)

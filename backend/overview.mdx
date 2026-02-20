@@ -1,0 +1,151 @@
+---
+title: "Visión general del Backend"
+description: "Documentación del SDK de backend para Node.js"
+---
+
+# Backend SDK
+
+El SDK de backend para Node.js proporciona todo lo necesario para implementar autenticación por WhatsApp en tu servidor.
+
+## Instalación
+
+```bash
+npm install @camarauth/sdk
+# o
+yarn add @camarauth/sdk
+# o
+pnpm add @camarauth/sdk
+```
+
+## Componentes principales
+
+### CamarauthBackend
+
+La clase principal que gestiona todo el flujo de autenticación:
+
+```typescript
+import { CamarauthBackend } from '@camarauth/sdk/server';
+
+const backend = new CamarauthBackend({
+  port: 3001,
+  evolutionApiUrl: 'https://tu-evolution-api.com',
+  evolutionApiKey: 'tu-api-key',
+  evolutionInstanceName: 'mi-instancia'
+});
+
+backend.start();
+```
+
+### CamarauthClient
+
+Cliente HTTP para comunicarse con el backend:
+
+```typescript
+import { CamarauthClient } from '@camarauth/sdk';
+
+const client = new CamarauthClient({
+  apiUrl: 'http://localhost:3001'
+});
+
+const response = await client.checkLogin('ABC123');
+```
+
+## Soporte de bases de datos
+
+Camarauth funciona con **cualquier base de datos** gracias al sistema de adaptadores:
+
+<CardGroup cols={2}>
+  
+  <Card title="PostgreSQL" icon="database" href="/backend/adapters/postgresql">
+    PostgreSQL, MySQL, SQLite
+  </Card>
+  
+  <Card title="MongoDB" icon="leaf" href="/backend/adapters/mongodb">
+    MongoDB con mapeo flexible
+  </Card>
+  
+  <Card title="Redis" icon="server" href="/backend/adapters/redis">
+    Redis para caché y sesiones
+  </Card>
+  
+  <Card title="Custom" icon="code" href="/backend/adapters/custom">
+    DynamoDB, Firebase, Prisma, etc.
+  </Card>
+
+</CardGroup>
+
+## Características
+
+- ✅ **WebSocket Server** - Comunicación en tiempo real
+- ✅ **HTTP API** - Endpoints RESTful documentados con Swagger
+- ✅ **Webhooks** - Integración con Evolution API
+- ✅ **JWT** - Tokens seguros con refresh
+- ✅ **Cualquier base de datos** - PostgreSQL, MongoDB, Redis, o custom
+- ✅ **CORS** - Configurable
+- ✅ **Auto-cleanup** - Limpieza automática de PINs expirados
+
+## Estructura del proyecto recomendada
+
+```
+my-camarauth-server/
+├── src/
+│   ├── index.ts           # Punto de entrada
+│   ├── config.ts          # Configuración
+│   └── adapters/          # Adaptadores de DB (opcional)
+│       └── custom-adapter.ts
+├── .env
+├── package.json
+└── tsconfig.json
+```
+
+## Ejemplo básico
+
+```typescript
+// src/index.ts
+import { CamarauthBackend, PostgreSQLAdapter } from '@camarauth/sdk/server';
+import { Pool } from 'pg';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
+
+const backend = new CamarauthBackend({
+  port: parseInt(process.env.PORT || '3001'),
+  jwtSecret: process.env.JWT_SECRET!,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+  corsOrigins: ['http://localhost:5173'],
+  database: new PostgreSQLAdapter(pool)
+});
+
+backend.start();
+```
+
+## Ejemplo sin base de datos (modo memoria)
+
+```typescript
+import { CamarauthBackend } from '@camarauth/sdk/server';
+
+const backend = new CamarauthBackend({
+  port: 3001,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!
+  // No pasar 'database' - usa memoria RAM
+});
+
+backend.start();
+```
+
+## Siguientes pasos
+
+- [Instalación detallada](/backend/installation)
+- [Configuración](/backend/configuration)
+- [DatabaseAdapter interface](/backend/database-adapter)
+- [Quickstart completo](/backend/quickstart)
+- [API Reference (Swagger)](/api-reference)
+- [Documentación de clases](/backend/classes/camarauth-backend)

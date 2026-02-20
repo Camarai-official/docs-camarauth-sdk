@@ -1,0 +1,235 @@
+---
+title: "usePinAuth"
+description: "Hook principal para autenticación con PIN en React"
+---
+
+# usePinAuth
+
+Hook principal que orquesta todo el flujo de autenticación por PIN.
+
+## Uso
+
+```typescript
+import { usePinAuth } from "@camarauth/sdk/react";
+
+function LoginComponent() {
+  const auth = usePinAuth({
+    apiUrl: "http://localhost:3001",
+    whatsappNumber: "+1234567890",
+    onSuccess: (user) => console.log("Autenticado:", user),
+  });
+
+  // Usar auth...
+}
+```
+
+## Parámetros
+
+<ParamField path="options" type="PinAuthOptions" required>
+  Opciones de configuración
+</ParamField>
+
+### PinAuthOptions
+
+<ParamField path="apiUrl" type="string" required>
+  URL del backend de Camarauth
+</ParamField>
+
+<ParamField path="whatsappNumber" type="string" required>
+  Número de WhatsApp para enviar el PIN
+</ParamField>
+
+<ParamField path="pinLength" type="number" default="6">
+  Longitud del PIN a generar
+</ParamField>
+
+<ParamField path="expiresIn" type="number" default="180">
+  Segundos antes de que expire el PIN
+</ParamField>
+
+<ParamField path="maxAutoRegenerations" type="number" default="3">
+  Máximo de regeneraciones automáticas
+</ParamField>
+
+<ParamField path="autoGenerate" type="boolean" default="false">
+  Generar PIN automáticamente al conectar
+</ParamField>
+
+<ParamField path="messagePrefix" type="string" default="'PIN:'">
+  Prefijo del mensaje de WhatsApp
+</ParamField>
+
+<ParamField
+  path="onPinGenerated"
+  type="(pin: string, emojis: string[]) => void"
+>
+  Callback cuando se genera un PIN
+</ParamField>
+
+<ParamField path="onSuccess" type="(user: User) => void">
+  Callback cuando la autenticación es exitosa
+</ParamField>
+
+<ParamField path="onError" type="(error: CamarauthError) => void">
+  Callback cuando hay un error
+</ParamField>
+
+<ParamField path="onExpire" type="() => void">
+  Callback cuando el PIN expira
+</ParamField>
+
+<ParamField path="onMaxRegenerationsReached" type="() => void">
+  Callback cuando se alcanza el máximo de regeneraciones
+</ParamField>
+
+## Valor de retorno
+
+Retorna un objeto `PinAuthState`:
+
+<ResponseField name="pin" type="string | null">
+  PIN actual
+</ResponseField>
+
+<ResponseField name="emojis" type="string[]">
+  Array de emojis del PIN
+</ResponseField>
+
+<ResponseField name="emojiString" type="string">
+  PIN como string de emojis
+</ResponseField>
+
+<ResponseField name="timeLeft" type="number">
+  Segundos restantes
+</ResponseField>
+
+<ResponseField name="formattedTime" type="string">
+  Tiempo formateado (MM:SS)
+</ResponseField>
+
+<ResponseField name="isExpired" type="boolean">
+  Si el PIN expiró
+</ResponseField>
+
+<ResponseField name="regenerationCount" type="number">
+  Número de regeneraciones
+</ResponseField>
+
+<ResponseField name="hasReachedMaxRegenerations" type="boolean">
+  Si se alcanzó el máximo
+</ResponseField>
+
+<ResponseField name="status" type="AuthStatus">
+  Estado actual: 'idle' | 'polling' | 'success' | 'error' | 'expired'
+</ResponseField>
+
+<ResponseField name="isLoading" type="boolean">
+  Si está cargando o conectando
+</ResponseField>
+
+<ResponseField name="user" type="User | null">
+  Datos del usuario autenticado
+</ResponseField>
+
+<ResponseField name="error" type="CamarauthError | null">
+  Error actual si existe
+</ResponseField>
+
+<ResponseField name="whatsappLink" type="string">
+  Link de WhatsApp con mensaje
+</ResponseField>
+
+<ResponseField name="qrCodeUrl" type="string | null">
+  URL del QR code
+</ResponseField>
+
+<ResponseField name="fullMessage" type="string">
+  Mensaje completo para WhatsApp
+</ResponseField>
+
+### Métodos
+
+<ResponseField name="generate" type="() => void">
+  Generar un nuevo PIN
+</ResponseField>
+
+<ResponseField name="cancel" type="() => void">
+  Cancelar autenticación actual
+</ResponseField>
+
+<ResponseField name="reset" type="() => void">
+  Resetear todo el estado
+</ResponseField>
+
+## Ejemplo completo
+
+```tsx
+import { usePinAuth } from "@camarauth/sdk/react";
+
+function LoginPage() {
+  const auth = usePinAuth({
+    apiUrl: "http://localhost:3001",
+    whatsappNumber: "+1234567890",
+    onSuccess: (user) => {
+      // Redirigir al dashboard
+      window.location.href = "/dashboard";
+    },
+    onError: (error) => {
+      console.error("Error:", error.message);
+    },
+  });
+
+  if (auth.status === "success") {
+    return <div>¡Bienvenido, {auth.user?.name}!</div>;
+  }
+
+  return (
+    <div className="login-container">
+      <h1>Iniciar sesión</h1>
+
+      {!auth.pin ? (
+        <button onClick={auth.generate} disabled={auth.isLoading}>
+          {auth.isLoading ? "Conectando..." : "Generar código"}
+        </button>
+      ) : (
+        <div className="auth-display">
+          <div className="emojis">
+            {auth.emojis.map((emoji, i) => (
+              <span key={i} className="emoji">
+                {emoji}
+              </span>
+            ))}
+          </div>
+
+          <p>Expira en: {auth.formattedTime}</p>
+
+          {auth.qrCodeUrl && (
+            <img
+              src={auth.qrCodeUrl}
+              alt="Escanear para WhatsApp"
+              className="qr-code"
+            />
+          )}
+
+          <a
+            href={auth.whatsappLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="whatsapp-btn"
+          >
+            Abrir WhatsApp
+          </a>
+
+          <button onClick={auth.cancel}>Cancelar</button>
+        </div>
+      )}
+
+      {auth.error && <div className="error">{auth.error.message}</div>}
+    </div>
+  );
+}
+```
+
+## Véase también
+
+- [PinAuthOptions interface](/react/interfaces/pin-auth-options)
+- [PinAuthState interface](/react/interfaces/pin-auth-state)

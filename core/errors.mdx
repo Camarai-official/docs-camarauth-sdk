@@ -1,0 +1,259 @@
+---
+title: "Errors"
+description: "Manejo de errores en Camarauth SDK"
+---
+
+# Errors
+
+Camarauth SDK proporciona clases de error específicas para manejar diferentes situaciones.
+
+## Jerarquía de errores
+
+```
+Error
+└── CamarauthError
+    ├── PinExpiredError
+    ├── RefreshTokenExpiredError
+    ├── AuthenticationError
+    ├── NetworkError
+    └── ValidationError
+```
+
+## CamarauthError
+
+Clase base para todos los errores del SDK.
+
+```typescript
+class CamarauthError extends Error {
+  message: string;
+  code: ErrorCode;
+  statusCode?: number;
+}
+
+type ErrorCode = 
+  | 'PIN_EXPIRED'
+  | 'REFRESH_TOKEN_EXPIRED'
+  | 'AUTHENTICATION_FAILED'
+  | 'NETWORK_ERROR'
+  | 'VALIDATION_ERROR';
+```
+
+### Uso
+
+```typescript
+import { CamarauthError } from '@camarauth/sdk';
+
+try {
+  // código
+} catch (error) {
+  if (error instanceof CamarauthError) {
+    console.log(error.code);      // "PIN_EXPIRED"
+    console.log(error.message);   // "PIN has expired"
+    console.log(error.statusCode); // 410
+  }
+}
+```
+
+## PinExpiredError
+
+El PIN ha expirado.
+
+```typescript
+class PinExpiredError extends CamarauthError {
+  code = 'PIN_EXPIRED';
+  statusCode = 410;
+}
+```
+
+### Ejemplo
+
+```typescript
+import { PinExpiredError } from '@camarauth/sdk';
+
+try {
+  await checkLogin(pin);
+} catch (error) {
+  if (error instanceof PinExpiredError) {
+    console.log('El PIN ha expirado');
+    // Generar nuevo PIN
+  }
+}
+```
+
+## RefreshTokenExpiredError
+
+El refresh token ha expirado.
+
+```typescript
+class RefreshTokenExpiredError extends CamarauthError {
+  code = 'REFRESH_TOKEN_EXPIRED';
+  statusCode = 401;
+}
+```
+
+### Ejemplo
+
+```typescript
+import { RefreshTokenExpiredError } from '@camarauth/sdk';
+
+try {
+  await refreshToken(refreshToken);
+} catch (error) {
+  if (error instanceof RefreshTokenExpiredError) {
+    console.log('Sesión expirada, inicia sesión de nuevo');
+    // Redirigir a login
+  }
+}
+```
+
+## AuthenticationError
+
+Error de autenticación general.
+
+```typescript
+class AuthenticationError extends CamarauthError {
+  code = 'AUTHENTICATION_FAILED';
+  statusCode = 401;
+}
+```
+
+### Ejemplo
+
+```typescript
+import { AuthenticationError } from '@camarauth/sdk';
+
+try {
+  await login(credentials);
+} catch (error) {
+  if (error instanceof AuthenticationError) {
+    console.log('Credenciales inválidas');
+  }
+}
+```
+
+## NetworkError
+
+Error de conexión de red.
+
+```typescript
+class NetworkError extends CamarauthError {
+  code = 'NETWORK_ERROR';
+}
+```
+
+### Ejemplo
+
+```typescript
+import { NetworkError } from '@camarauth/sdk';
+
+try {
+  await apiCall();
+} catch (error) {
+  if (error instanceof NetworkError) {
+    console.log('Error de conexión');
+    // Reintentar o mostrar mensaje al usuario
+  }
+}
+```
+
+## ValidationError
+
+Error de validación de datos.
+
+```typescript
+class ValidationError extends CamarauthError {
+  code = 'VALIDATION_ERROR';
+  statusCode = 400;
+}
+```
+
+### Ejemplo
+
+```typescript
+import { ValidationError } from '@camarauth/sdk';
+
+try {
+  await registerPin(pin);
+} catch (error) {
+  if (error instanceof ValidationError) {
+    console.log('Datos inválidos');
+  }
+}
+```
+
+## Manejo global de errores
+
+### En React
+
+```tsx
+import { usePinAuth, CamarauthError } from '@camarauth/sdk/react';
+
+function LoginComponent() {
+  const auth = usePinAuth({
+    apiUrl: 'http://localhost:3001',
+    whatsappNumber: '+1234567890',
+    onError: (error) => {
+      if (error instanceof CamarauthError) {
+        switch (error.code) {
+          case 'PIN_EXPIRED':
+            alert('El código ha expirado');
+            break;
+          case 'NETWORK_ERROR':
+            alert('Error de conexión');
+            break;
+          default:
+            alert(error.message);
+        }
+      }
+    }
+  });
+
+  return <button onClick={auth.generate}>Generar</button>;
+}
+```
+
+### En Node.js
+
+```typescript
+import { CamarauthError } from '@camarauth/sdk';
+
+app.use((error, req, res, next) => {
+  if (error instanceof CamarauthError) {
+    return res.status(error.statusCode || 500).json({
+      error: error.code,
+      message: error.message
+    });
+  }
+  
+  next(error);
+});
+```
+
+## Códigos de error
+
+| Código | HTTP | Descripción |
+|--------|------|-------------|
+| `PIN_EXPIRED` | 410 | PIN expirado |
+| `REFRESH_TOKEN_EXPIRED` | 401 | Refresh token expirado |
+| `AUTHENTICATION_FAILED` | 401 | Autenticación fallida |
+| `NETWORK_ERROR` | 503 | Error de red |
+| `VALIDATION_ERROR` | 400 | Datos inválidos |
+
+## Crear errores personalizados
+
+```typescript
+import { CamarauthError } from '@camarauth/sdk';
+
+class CustomError extends CamarauthError {
+  constructor(message: string) {
+    super(message, 'CUSTOM_ERROR', 418);
+  }
+}
+
+throw new CustomError('Algo salió mal');
+```
+
+## Véase también
+
+- [Core Overview](/core/overview)
+- [Pin Generator](/core/pin-generator)

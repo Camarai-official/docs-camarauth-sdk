@@ -1,0 +1,108 @@
+---
+title: "useAuthContext"
+description: "Documentación del hook useAuthContext"
+---
+
+# useAuthContext
+
+Hook para acceder al estado de autenticación global.
+
+## Uso Básico
+
+```typescript
+import { useAuthContext } from 'camarauth-sdk/react';
+
+function Navbar() {
+  const { user, isAuthenticated, isLoading, logout } = useAuthContext();
+
+  if (isLoading) {
+    return <div>Cargando...</div>;
+  }
+
+  return (
+    <nav>
+      <div>Mi App</div>
+      {isAuthenticated ? (
+        <div>
+          <span>Hola, {user?.name}</span>
+          <button onClick={() => logout()}>Cerrar sesión</button>
+        </div>
+      ) : (
+        <a href="/login">Iniciar sesión</a>
+      )}
+    </nav>
+  );
+}
+```
+
+## Retorno
+
+| Propiedad | Tipo | Descripción |
+|-----------|------|-------------|
+| `user` | `User \| null` | Usuario autenticado |
+| `isAuthenticated` | `boolean` | Si está autenticado |
+| `isLoading` | `boolean` | Si está cargando |
+| `error` | `CamarauthError \| null` | Error actual |
+| `login` | `(user: User) => void` | Iniciar sesión manual |
+| `logout` | `() => Promise<void>` | Cerrar sesión |
+| `setLoading` | `(loading: boolean) => void` | Setear estado de carga |
+| `setError` | `(error: CamarauthError \| null) => void` | Setear error |
+
+## Ejemplos
+
+### Protección de Rutas
+
+```typescript
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuthContext();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
+  if (isLoading) return <div>Cargando...</div>;
+  if (!isAuthenticated) return null;
+
+  return <>{children}</>;
+}
+```
+
+### Perfil de Usuario
+
+```typescript
+function UserProfile() {
+  const { user, logout } = useAuthContext();
+
+  if (!user) return <div>No autenticado</div>;
+
+  return (
+    <div>
+      <h1>Perfil de {user.name}</h1>
+      <p>Email: {user.email}</p>
+      <p>Teléfono: {user.phone}</p>
+      {user.avatar && <img src={user.avatar} alt={user.name} />}
+      <button onClick={() => logout()}>Cerrar sesión</button>
+    </div>
+  );
+}
+```
+
+## Requisitos
+
+Este hook debe usarse dentro de un `AuthProvider`:
+
+```tsx
+import { AuthProvider } from 'camarauth-sdk/react';
+
+function App() {
+  return (
+    <AuthProvider apiUrl="http://localhost:3001">
+      <Navbar />
+      <Routes />
+    </AuthProvider>
+  );
+}
+```

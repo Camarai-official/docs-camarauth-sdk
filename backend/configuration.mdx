@@ -1,0 +1,237 @@
+---
+title: "Configuración"
+description: "Guía de configuración avanzada del backend"
+---
+
+# Configuración
+
+## Variables de entorno
+
+Crea un archivo `.env` en la raíz de tu proyecto:
+
+```bash
+# Servidor
+PORT=3001
+HOST=0.0.0.0
+
+# Seguridad
+JWT_SECRET=tu-secreto-super-seguro-minimo-32-caracteres
+
+# Evolution API
+EVOLUTION_API_URL=https://tu-evolution-api.com
+EVOLUTION_API_KEY=tu-api-key-aqui
+EVOLUTION_INSTANCE_NAME=mi-instancia
+
+# Configuración
+PIN_EXPIRATION_MINUTES=3
+CORS_ORIGINS=http://localhost:5173,https://tu-app.com
+
+# Base de datos (opcional)
+DATABASE_URL=postgresql://user:pass@localhost:5432/camarauth
+```
+
+## Opciones de configuración
+
+### Configuración básica
+
+```typescript
+import { CamarauthBackend } from '@camarauth/sdk/server';
+
+const backend = new CamarauthBackend({
+  port: 3001,
+  host: '0.0.0.0',
+  jwtSecret: 'tu-secreto-jwt',
+  evolutionApiUrl: 'https://evolution-api.com',
+  evolutionApiKey: 'tu-api-key',
+  evolutionInstanceName: 'mi-instancia'
+});
+```
+
+### Configuración con base de datos
+
+```typescript
+import { CamarauthBackend, PostgreSQLAdapter } from '@camarauth/sdk/server';
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
+
+const backend = new CamarauthBackend({
+  port: 3001,
+  jwtSecret: process.env.JWT_SECRET!,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+  database: new PostgreSQLAdapter(pool, {
+    userTable: 'users',
+    userIdColumn: 'id',
+    userNameColumn: 'name'
+  })
+});
+```
+
+### Configuración de CORS
+
+```typescript
+const backend = new CamarauthBackend({
+  // ... otras opciones
+  corsOrigins: [
+    'http://localhost:5173',      // Vite dev server
+    'http://localhost:3000',      // React dev server
+    'https://mi-app.com',         // Producción
+    'https://app.mi-dominio.com'  // Subdominio
+  ]
+});
+```
+
+### Configuración de expiración de PINs
+
+```typescript
+const backend = new CamarauthBackend({
+  // ... otras opciones
+  pinExpirationMinutes: 5  // 5 minutos (default: 3)
+});
+```
+
+## Configuración por entorno
+
+### Desarrollo
+
+```typescript
+// config/development.ts
+export const config = {
+  port: 3001,
+  host: 'localhost',
+  jwtSecret: 'dev-secret',
+  evolutionApiUrl: 'http://localhost:8080',
+  evolutionApiKey: 'dev-key',
+  evolutionInstanceName: 'dev-instance',
+  pinExpirationMinutes: 10,  // Más tiempo para debugging
+  corsOrigins: ['http://localhost:5173', 'http://localhost:3000']
+};
+```
+
+### Producción
+
+```typescript
+// config/production.ts
+export const config = {
+  port: parseInt(process.env.PORT || '3001'),
+  host: '0.0.0.0',
+  jwtSecret: process.env.JWT_SECRET!,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+  pinExpirationMinutes: 3,
+  corsOrigins: process.env.CORS_ORIGINS?.split(',') || []
+};
+```
+
+### Uso dinámico
+
+```typescript
+// src/config.ts
+import { CamarauthBackend } from '@camarauth/sdk/server';
+
+const env = process.env.NODE_ENV || 'development';
+const config = require(`./config/${env}`).config;
+
+export const backend = new CamarauthBackend(config);
+```
+
+## Webhook de Evolution API
+
+Configura el webhook en tu panel de Evolution API:
+
+```
+URL: http://TU-IP:3001/whatsapp-endpoint
+Eventos: messages.upsert
+```
+
+### Con Tailscale (para desarrollo local)
+
+```bash
+# Obtener tu IP de Tailscale
+tailscale ip -4
+# Output: 100.x.x.x
+
+# Configurar webhook en Evolution:
+# http://100.x.x.x:3001/whatsapp-endpoint
+```
+
+## Seguridad
+
+### JWT Secret
+
+⚠️ **Importante**: Usa un secreto seguro en producción:
+
+```bash
+# Generar secreto aleatorio
+date +%s | sha256sum | base64 | head -c 64 ; echo
+
+# O usar openssl
+openssl rand -base64 64
+```
+
+### HTTPS en producción
+
+El SDK no maneja HTTPS directamente. Usa un reverse proxy:
+
+```nginx
+# nginx.conf
+server {
+  listen 443 ssl;
+  server_name api.tu-app.com;
+  
+  ssl_certificate /path/to/cert.pem;
+  ssl_certificate_key /path/to/key.pem;
+  
+  location / {
+    proxy_pass http://localhost:3001;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host $host;
+    proxy_cache_bypass $http_upgrade;
+  }
+}
+```
+
+## Variables de entorno completas
+
+| Variable | Descripción | Requerido | Default |
+|----------|-------------|-----------|---------|
+| `PORT` | Puerto del servidor | No | 3001 |
+| `HOST` | Host del servidor | No | 0.0.0.0 |
+| `JWT_SECRET` | Secreto para JWT | Sí | - |
+| `EVOLUTION_API_URL` | URL de Evolution API | Sí | - |
+| `EVOLUTION_API_KEY` | API Key de Evolution | Sí | - |
+| `EVOLUTION_INSTANCE_NAME` | Nombre de instancia | Sí | - |
+| `PIN_EXPIRATION_MINUTES` | Minutos de expiración | No | 3 |
+| `CORS_ORIGINS` | Orígenes CORS (coma separado) | No | localhost |
+| `DATABASE_URL` | URL de conexión a DB | No | - |
+
+## Troubleshooting
+
+### Error: "CORS policy"
+
+Agrega tu dominio a `corsOrigins`:
+
+```typescript
+corsOrigins: ['https://tu-dominio.com']
+```
+
+### Error: "JWT malformed"
+
+Verifica que `JWT_SECRET` tenga al menos 32 caracteres.
+
+### Error: "Connection refused"
+
+Verifica que Evolution API esté corriendo y accesible desde el servidor.
+
+## Véase también
+
+- [Instalación](/backend/installation)
+- [Quickstart](/backend/quickstart)
+- [DatabaseAdapter](/backend/database-adapter)

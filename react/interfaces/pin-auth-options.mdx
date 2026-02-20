@@ -1,0 +1,245 @@
+---
+title: "PinAuthOptions"
+description: "Opciones de configuración para usePinAuth"
+---
+
+# PinAuthOptions
+
+Interface de opciones para el hook `usePinAuth`.
+
+## Propiedades
+
+### apiUrl
+
+URL del backend de Camarauth.
+
+```typescript
+apiUrl: string
+```
+
+**Ejemplo:**
+```typescript
+apiUrl: 'http://localhost:3001'
+```
+
+### whatsappNumber
+
+Número de WhatsApp para enviar el PIN.
+
+```typescript
+whatsappNumber: string
+```
+
+**Ejemplo:**
+```typescript
+whatsappNumber: '+1234567890'
+```
+
+### pinLength
+
+Longitud del PIN a generar.
+
+```typescript
+pinLength?: number
+```
+
+- **Default:** `6`
+- **Mínimo:** `4`
+- **Máximo:** `10`
+
+**Ejemplo:**
+```typescript
+pinLength: 8
+```
+
+### expiresIn
+
+Segundos antes de que expire el PIN.
+
+```typescript
+expiresIn?: number
+```
+
+- **Default:** `180` (3 minutos)
+- **Mínimo:** `60` (1 minuto)
+- **Máximo:** `600` (10 minutos)
+
+**Ejemplo:**
+```typescript
+expiresIn: 300  // 5 minutos
+```
+
+### maxAutoRegenerations
+
+Máximo número de regeneraciones automáticas.
+
+```typescript
+maxAutoRegenerations?: number
+```
+
+- **Default:** `3`
+
+**Ejemplo:**
+```typescript
+maxAutoRegenerations: 5
+```
+
+### autoGenerate
+
+Generar PIN automáticamente al conectar.
+
+```typescript
+autoGenerate?: boolean
+```
+
+- **Default:** `false`
+
+**Ejemplo:**
+```typescript
+autoGenerate: true
+```
+
+### messagePrefix
+
+Prefijo del mensaje de WhatsApp.
+
+```typescript
+messagePrefix?: string
+```
+
+- **Default:** `'PIN:'`
+
+**Ejemplo:**
+```typescript
+messagePrefix: 'Código:'
+```
+
+### onPinGenerated
+
+Callback cuando se genera un PIN.
+
+```typescript
+onPinGenerated?: (pin: string, emojis: string[]) => void
+```
+
+**Ejemplo:**
+```typescript
+onPinGenerated: (pin, emojis) => {
+  console.log('PIN generado:', pin);
+  console.log('Emojis:', emojis);
+}
+```
+
+### onSuccess
+
+Callback cuando la autenticación es exitosa.
+
+```typescript
+onSuccess?: (user: User) => void
+```
+
+**Ejemplo:**
+```typescript
+onSuccess: (user) => {
+  console.log('Usuario autenticado:', user);
+  localStorage.setItem('token', user.token);
+}
+```
+
+### onError
+
+Callback cuando hay un error.
+
+```typescript
+onError?: (error: CamarauthError) => void
+```
+
+**Ejemplo:**
+```typescript
+onError: (error) => {
+  console.error('Error:', error.message);
+  alert('Error: ' + error.message);
+}
+```
+
+### onExpire
+
+Callback cuando el PIN expira.
+
+```typescript
+onExpire?: () => void
+```
+
+**Ejemplo:**
+```typescript
+onExpire: () => {
+  console.log('PIN expirado');
+  alert('El código ha expirado. Por favor genera uno nuevo.');
+}
+```
+
+### onMaxRegenerationsReached
+
+Callback cuando se alcanza el máximo de regeneraciones.
+
+```typescript
+onMaxRegenerationsReached?: () => void
+```
+
+**Ejemplo:**
+```typescript
+onMaxRegenerationsReached: () => {
+  console.log('Máximo de intentos alcanzado');
+  alert('Has alcanzado el máximo de intentos.');
+}
+```
+
+## Ejemplo completo
+
+```typescript
+import { usePinAuth } from '@camarauth/sdk/react';
+
+function LoginComponent() {
+  const auth = usePinAuth({
+    // Requeridas
+    apiUrl: 'http://localhost:3001',
+    whatsappNumber: '+1234567890',
+    
+    // Opcionales
+    pinLength: 6,
+    expiresIn: 180,
+    maxAutoRegenerations: 3,
+    autoGenerate: false,
+    messagePrefix: 'PIN:',
+    
+    // Callbacks
+    onPinGenerated: (pin, emojis) => {
+      console.log('PIN:', pin);
+    },
+    onSuccess: (user) => {
+      console.log('Éxito:', user);
+    },
+    onError: (error) => {
+      console.error('Error:', error);
+    },
+    onExpire: () => {
+      console.log('Expirado');
+    },
+    onMaxRegenerationsReached: () => {
+      console.log('Máximo alcanzado');
+    }
+  });
+
+  return (
+    <button onClick={auth.generate}>
+      Generar PIN
+    </button>
+  );
+}
+```
+
+## Véase también
+
+- [usePinAuth hook](/react/hooks/use-pin-auth)
+- [PinAuthState interface](/react/interfaces/pin-auth-state)
+- [User interface](/react/interfaces/user)

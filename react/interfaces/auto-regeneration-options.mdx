@@ -1,0 +1,70 @@
+---
+title: "AutoRegenerationOptions"
+description: "Opciones de configuracion para useAutoRegeneration"
+---
+
+# AutoRegenerationOptions
+
+Configura limites y callbacks del hook `useAutoRegeneration`.
+
+## Estructura
+
+```typescript
+interface AutoRegenerationOptions {
+  maxRegenerations?: number;
+  onMaxReached?: () => void;
+  onRegenerate?: (count: number) => void;
+}
+```
+
+## Propiedades
+
+### maxRegenerations
+
+Numero maximo de regeneraciones permitidas.
+
+```typescript
+maxRegenerations?: number;
+```
+
+- Default: `3`
+
+### onMaxReached
+
+Callback que se ejecuta cuando se alcanza el limite.
+
+```typescript
+onMaxReached?: () => void;
+```
+
+### onRegenerate
+
+Callback que se ejecuta en cada regeneracion valida.
+
+```typescript
+onRegenerate?: (count: number) => void;
+```
+
+## Ejemplo
+
+```tsx
+import { useAutoRegeneration } from "@camarauth/sdk/react";
+
+function RegenerationGuard() {
+  const { count, hasReachedMax, increment } = useAutoRegeneration({
+    maxRegenerations: 5,
+    onMaxReached: () => alert("Limite alcanzado"),
+  });
+
+  return (
+    <button onClick={increment} disabled={hasReachedMax}>
+      Regenerar ({count}/5)
+    </button>
+  );
+}
+```
+
+## Vease tambien
+
+- [useAutoRegeneration](/react/hooks/use-auto-regeneration)
+- [PinAuthOptions](/react/interfaces/pin-auth-options)

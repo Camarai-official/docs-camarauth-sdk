@@ -1,0 +1,117 @@
+---
+title: "Node.js SDK"
+description: "Documentación del SDK de Node.js para Camarauth"
+---
+
+# Node.js SDK
+
+El SDK oficial de Node.js para implementar autenticación por WhatsApp en tus aplicaciones.
+
+## Instalación
+
+```bash
+npm install @camarauth/sdk
+```
+
+## Características
+
+- 🚀 **Servidor completo** - HTTP + WebSocket
+- 📱 **WhatsApp integration** - Evolution API webhooks
+- 🔐 **JWT seguros** - Tokens con refresh automático
+- 🗄️ **Base de datos** - Soporte PostgreSQL opcional
+- ⚡ **Alto rendimiento** - WebSocket para tiempo real
+- 🧪 **Testeado** - Cobertura completa de tests
+
+## Uso básico
+
+### Backend
+
+```typescript
+import { CamarauthBackend } from '@camarauth/sdk/server';
+
+const backend = new CamarauthBackend({
+  port: 3001,
+  evolutionApiUrl: 'https://tu-evolution-api.com',
+  evolutionApiKey: 'tu-api-key',
+  evolutionInstanceName: 'mi-instancia'
+});
+
+backend.start();
+```
+
+### Cliente
+
+```typescript
+import { CamarauthClient } from '@camarauth/sdk';
+
+const client = new CamarauthClient({
+  apiUrl: 'http://localhost:3001'
+});
+
+const response = await client.checkLogin('ABC123');
+```
+
+## Módulos disponibles
+
+<CardGroup cols={2}>
+  
+  <Card title="Server" icon="server" href="/backend/overview">
+    `import { CamarauthBackend } from '@camarauth/sdk/server'`
+    
+    Servidor completo con Express y Socket.IO
+  </Card>
+  
+  <Card title="Client" icon="code" href="/backend/classes/camarauth-client">
+    `import { CamarauthClient } from '@camarauth/sdk'`
+    
+    Cliente HTTP para comunicación con el backend
+  </Card>
+
+</CardGroup>
+
+## Ejemplo completo
+
+```typescript
+import { CamarauthBackend } from '@camarauth/sdk/server';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const backend = new CamarauthBackend({
+  port: parseInt(process.env.PORT || '3001'),
+  jwtSecret: process.env.JWT_SECRET!,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+  pinExpirationMinutes: 3,
+  corsOrigins: ['http://localhost:5173']
+});
+
+// Eventos
+backend.on('auth:verified', async (data) => {
+  console.log('Usuario verificado:', data.userId);
+  
+  // Enviar mensaje de bienvenida
+  await backend.sendWhatsAppMessage({
+    phoneNumber: data.phoneNumber,
+    message: '¡Bienvenido! Tu sesión ha sido verificada. 🔐'
+  });
+});
+
+backend.start();
+```
+
+## Documentación
+
+- [Guía de inicio rápido](/quickstart)
+- [Documentación del backend](/backend/overview)
+- [Clases](/backend/classes/camarauth-backend)
+- [Interfaces](/backend/interfaces/backend-config)
+
+## Repositorio
+
+[github.com/camarauth/camarauth-sdk](https://github.com/camarauth/camarauth-sdk)
+
+## Licencia
+
+MIT © [Camarauth](https://camarauth.com)

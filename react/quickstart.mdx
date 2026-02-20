@@ -1,0 +1,282 @@
+---
+title: "Quickstart"
+description: "Guía rápida para integrar Camarauth en React"
+---
+
+# Quickstart React
+
+Configura la autenticación en tu aplicación React en 5 minutos.
+
+## Paso 1: Configurar variables de entorno
+
+```bash
+# .env
+VITE_CAMARAUTH_API_URL=http://localhost:3001
+VITE_WHATSAPP_NUMBER=+1234567890
+```
+
+## Paso 2: Crear componente de login
+
+```tsx
+// components/LoginButton.tsx
+import { usePinAuth } from "@camarauth/sdk/react";
+
+export function LoginButton() {
+  const auth = usePinAuth({
+    apiUrl: import.meta.env.VITE_CAMARAUTH_API_URL,
+    whatsappNumber: import.meta.env.VITE_WHATSAPP_NUMBER,
+    onSuccess: (user) => {
+      console.log("Autenticado:", user);
+      // Guardar en localStorage o context
+      localStorage.setItem("user", JSON.stringify(user));
+    },
+    onError: (error) => {
+      console.error("Error:", error.message);
+    },
+  });
+
+  if (auth.status === "success") {
+    return <div>¡Bienvenido, {auth.user?.name}!</div>;
+  }
+
+  return (
+    <button onClick={auth.generate} disabled={auth.isLoading}>
+      {auth.isLoading ? "Conectando..." : "Iniciar sesión con WhatsApp"}
+    </button>
+  );
+}
+```
+
+## Paso 3: Crear modal de autenticación
+
+```tsx
+// components/AuthModal.tsx
+import { usePinAuth } from "@camarauth/sdk/react";
+
+interface AuthModalProps {
+  onClose: () => void;
+  onSuccess: (user: any) => void;
+}
+
+export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
+  const auth = usePinAuth({
+    apiUrl: import.meta.env.VITE_CAMARAUTH_API_URL,
+    whatsappNumber: import.meta.env.VITE_WHATSAPP_NUMBER,
+    autoGenerate: true, // Generar PIN automáticamente
+    onSuccess: (user) => {
+      onSuccess(user);
+      onClose();
+    },
+  });
+
+  return (
+    <div className="modal">
+      <div className="modal-content">
+        <button onClick={onClose}>×</button>
+
+        {auth.status === "success" ? (
+          <div>
+            <h2>¡Autenticación exitosa!</h2>
+            <p>Bienvenido, {auth.user?.name}</p>
+          </div>
+        ) : (
+          <div>
+            <h2>Iniciar sesión</h2>
+
+            {auth.isLoading && <p>Conectando...</p>}
+
+            {auth.pin && (
+              <>
+                <div className="emojis">
+                  {auth.emojis.map((emoji, i) => (
+                    <span key={i} style={{ fontSize: "2rem" }}>
+                      {emoji}
+                    </span>
+                  ))}
+                </div>
+
+                <p>Expira en: {auth.formattedTime}</p>
+
+                {auth.qrCodeUrl && <img src={auth.qrCodeUrl} alt="QR Code" />}
+
+                <a
+                  href={auth.whatsappLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Abrir WhatsApp
+                </a>
+
+                <button onClick={auth.cancel}>Cancelar</button>
+              </>
+            )}
+
+            {auth.error && <p className="error">{auth.error.message}</p>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+## Paso 4: Integrar en tu app
+
+```tsx
+// App.tsx
+import { useState } from "react";
+import { LoginButton } from "./components/LoginButton";
+import { AuthModal } from "./components/AuthModal";
+
+function App() {
+  const [showModal, setShowModal] = useState(false);
+  const [user, setUser] = useState(null);
+
+  return (
+    <div>
+      {user ? (
+        <div>
+          <h1>Dashboard</h1>
+          <p>Bienvenido, {user.name}</p>
+          <button
+            onClick={() => {
+              localStorage.removeItem("user");
+              setUser(null);
+            }}
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      ) : (
+        <div>
+          <h1>Mi Aplicación</h1>
+          <button onClick={() => setShowModal(true)}>Iniciar sesión</button>
+        </div>
+      )}
+
+      {showModal && (
+        <AuthModal onClose={() => setShowModal(false)} onSuccess={setUser} />
+      )}
+    </div>
+  );
+}
+
+export default App;
+```
+
+## Paso 5: Estilos básicos
+
+```css
+/* styles.css */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  max-width: 400px;
+  text-align: center;
+}
+
+.emojis {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.error {
+  color: red;
+}
+```
+
+## Ejemplo completo con Tailwind
+
+```tsx
+// components/AuthModal.tsx
+import { usePinAuth } from "@camarauth/sdk/react";
+
+export function AuthModal({ onClose, onSuccess }) {
+  const auth = usePinAuth({
+    apiUrl: import.meta.env.VITE_CAMARAUTH_API_URL,
+    whatsappNumber: import.meta.env.VITE_WHATSAPP_NUMBER,
+    autoGenerate: true,
+    onSuccess,
+  });
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full">
+        <button onClick={onClose} className="float-right text-2xl">
+          ×
+        </button>
+
+        {auth.status === "success" ? (
+          <div className="text-center py-8">
+            <h2 className="text-2xl font-bold text-green-600">
+              ¡Autenticación exitosa!
+            </h2>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold">Iniciar sesión</h2>
+
+            {auth.isLoading && <p className="text-gray-500">Conectando...</p>}
+
+            {auth.pin && (
+              <>
+                <div className="flex justify-center gap-2 text-4xl py-4">
+                  {auth.emojis.map((emoji, i) => (
+                    <span key={i}>{emoji}</span>
+                  ))}
+                </div>
+
+                <p className="text-gray-600">
+                  Expira en:{" "}
+                  <span className="font-mono">{auth.formattedTime}</span>
+                </p>
+
+                {auth.qrCodeUrl && (
+                  <img src={auth.qrCodeUrl} alt="QR" className="mx-auto" />
+                )}
+
+                <a
+                  href={auth.whatsappLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full bg-green-500 text-white py-2 rounded text-center"
+                >
+                  Abrir WhatsApp
+                </a>
+
+                <button
+                  onClick={auth.cancel}
+                  className="block w-full border py-2 rounded"
+                >
+                  Cancelar
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+## Siguientes pasos
+
+- [usePinAuth hook](/react/hooks/use-pin-auth)
+- [Otras opciones de configuración](/react/interfaces/pin-auth-options)
+- [Manejo de errores](/core/errors)

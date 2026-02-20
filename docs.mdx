@@ -1,0 +1,160 @@
+---
+title: "Índice de Documentación"
+description: "Navegación completa por toda la documentación de Camarauth SDK"
+---
+
+# Índice de Documentación
+
+Esta página te ayuda a navegar por toda la documentación de Camarauth SDK organizada por temas.
+
+## Rutas recomendadas por perfil
+
+### Si estás empezando (junior)
+
+1. [Quickstart](/quickstart)
+2. [Arquitectura](/concepts/architecture)
+3. [Flujo de autenticación](/concepts/authentication-flow)
+4. [Quickstart Backend](/backend/quickstart)
+5. [Quickstart React](/react/quickstart)
+
+### Si ya tienes experiencia (senior)
+
+1. [Configuración backend](/backend/configuration)
+2. [DatabaseAdapter](/backend/database-adapter)
+3. [usePinAuth](/react/hooks/use-pin-auth)
+4. [Códigos de error](/api-reference/errors)
+5. [Guía de despliegue](/guides/deployment)
+
+## Para Empezar
+
+<CardGroup cols={2}>
+
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Configura Camarauth SDK en 5 minutos
+  </Card>
+
+  <Card title="Conceptos" icon="book-open" href="/concepts/architecture">
+    Entiende la arquitectura y flujo de autenticación
+  </Card>
+
+  <Card title="Guías" icon="compass" href="/guides/testing">
+    Testing, manejo de errores, despliegue y más
+  </Card>
+
+  <Card title="API Reference" icon="document-text" href="/api-reference">
+    Referencia completa de la API REST y WebSocket
+  </Card>
+
+</CardGroup>
+
+## SDKs Disponibles
+
+<CardGroup cols={3}>
+
+  <Card title="Node.js" icon="node" href="/sdks/nodejs">
+    Backend con Express y Socket.IO
+  </Card>
+
+  <Card title="React" icon="react" href="/sdks/react">
+    Frontend con hooks y componentes
+  </Card>
+
+  <Card title="Core" icon="code" href="/core/overview">
+    Funcionalidades universales
+  </Card>
+
+</CardGroup>
+
+## Estructura de la Documentación
+
+### Conceptos Fundamentales
+
+- **[Arquitectura](/concepts/architecture)** - Cómo está construido el SDK
+- **[Flujo de Autenticación](/concepts/authentication-flow)** - Paso a paso del proceso
+- **[Seguridad](/concepts/security)** - Prácticas de seguridad
+
+### Backend (Node.js)
+
+- **[Overview](/backend/overview)** - Visión general del backend
+- **[Instalación](/backend/installation)** - Cómo instalar
+- **[Configuración](/backend/configuration)** - Opciones de configuración
+- **[Quickstart](/backend/quickstart)** - Empezar rápido
+- **[Clases](/backend/classes/camarauth-backend)** - Referencia de clases
+- **[Database Adapter](/backend/database-adapter)** - Conectar bases de datos
+
+### Frontend (React)
+
+- **[Overview](/react/overview)** - Visión general de React
+- **[Instalación](/react/installation)** - Cómo instalar
+- **[Quickstart](/react/quickstart)** - Empezar rápido
+- **[Hooks](/react/hooks/use-pin-auth)** - Referencia de hooks
+- **[Interfaces](/react/interfaces/pin-auth-options)** - Tipos TypeScript
+
+### Guías Prácticas
+
+- **[Testing](/guides/testing)** - Cómo testear tu aplicación
+- **[Manejo de Errores](/guides/error-handling)** - Gestión robusta de errores
+- **[Despliegue](/guides/deployment)** - Poner en producción
+- **[Migración](/guides/migration)** - Actualizar entre versiones
+
+### API Reference
+
+- **[Endpoints REST](/api-reference)** - HTTP API
+- **[WebSocket Events](/api-reference/websocket)** - Eventos en tiempo real
+- **[Códigos de Error](/api-reference/errors)** - Referencia de errores
+
+## Ejemplos Rápidos
+
+### Backend Básico
+
+```typescript
+import { CamarauthBackend } from 'camarauth-sdk/backend';
+
+const backend = new CamarauthBackend({
+  port: 3001,
+  evolutionApiUrl: 'https://tu-evolution-api.com',
+  evolutionApiKey: 'tu-api-key',
+  evolutionInstanceName: 'mi-instancia'
+});
+
+backend.start();
+```
+
+### Frontend React
+
+```tsx
+import { usePinAuth } from 'camarauth-sdk/react';
+
+function Login() {
+  const { pin, emojis, generate, status } = usePinAuth({
+    apiUrl: 'http://localhost:3001',
+    whatsappNumber: '+34600123456'
+  });
+
+  if (status === 'success') {
+    return <div>¡Bienvenido!</div>;
+  }
+
+  return (
+    <div>
+      {!pin ? (
+        <button onClick={generate}>Generar PIN</button>
+      ) : (
+        <div>
+          <p>Tu código: {emojis.join(' ')}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+## Necesitas Ayuda?
+
+- 💬 [GitHub Discussions](https://github.com/camarauth/camarauth-sdk/discussions)
+- 🐛 [Reportar Issues](https://github.com/camarauth/camarauth-sdk/issues)
+- 📧 [Email de Soporte](mailto:support@camarauth.com)
+
+## Contribuir
+
+Las contribuciones son bienvenidas. Lee nuestra [guía de contribución](https://github.com/camarauth/camarauth-sdk/blob/main/CONTRIBUTING.md) para empezar.

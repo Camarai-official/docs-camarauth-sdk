@@ -1,0 +1,105 @@
+---
+title: "AuthResponse"
+description: "Estructura de respuesta para verificación de autenticación"
+---
+
+# AuthResponse
+
+Interface estándar retornada por `checkLogin` cuando consultas el estado de un PIN.
+
+## Estructura
+
+```typescript
+interface AuthResponse {
+  success: boolean;
+  verified: boolean;
+  message?: string;
+  token?: string;
+  refreshToken?: string;
+  user?: User;
+}
+```
+
+## Propiedades
+
+### success
+
+Indica si la operación HTTP fue procesada correctamente.
+
+```typescript
+success: boolean;
+```
+
+### verified
+
+Indica si el PIN ya fue verificado por WhatsApp.
+
+```typescript
+verified: boolean;
+```
+
+### message
+
+Mensaje descriptivo para estados intermedios o informativos.
+
+```typescript
+message?: string;
+```
+
+### token
+
+JWT de acceso, disponible solo cuando `verified` es `true`.
+
+```typescript
+token?: string;
+```
+
+### refreshToken
+
+Token de refresco, disponible solo cuando `verified` es `true`.
+
+```typescript
+refreshToken?: string;
+```
+
+### user
+
+Datos del usuario autenticado.
+
+```typescript
+user?: User;
+```
+
+## Ejemplos
+
+### Respuesta pendiente
+
+```json
+{
+  "success": true,
+  "verified": false,
+  "message": "Login pendiente"
+}
+```
+
+### Respuesta verificada
+
+```json
+{
+  "success": true,
+  "verified": true,
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {
+    "id": "123",
+    "name": "Juan",
+    "phone": "+1234567890",
+    "roles": ["user"]
+  }
+}
+```
+
+## Vease tambien
+
+- [User interface](/backend/interfaces/user)
+- [CamarauthClient](/backend/classes/camarauth-client)

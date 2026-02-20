@@ -1,55 +1,128 @@
-# Mintlify Starter Kit
+# Camarauth SDK Documentation
 
-Use the starter kit to get your docs deployed and ready to customize.
+Documentación oficial del SDK de Camarauth para autenticación por WhatsApp.
 
-Click the green **Use this template** button at the top of this repo to copy the Mintlify starter kit. The starter kit contains examples with
+## Estructura del proyecto
 
-- Guide pages
-- Navigation
-- Customizations
-- API reference pages
-- Use of popular components
+```
+camarauth-sdk-docs/
+├── index.mdx                    # Página principal
+├── quickstart.mdx               # Guía de inicio rápido
+├── docs.mdx                     # Índice global por perfiles
+├── mint.json                    # Configuración de navegación/branding
+├── package.json
+├── concepts/                    # Arquitectura, flujo y seguridad
+├── guides/                      # Testing, errores, deploy, migración
+├── api-reference/               # Endpoints, WebSocket y errores
+├── backend/                     # Documentación del backend
+│   ├── overview.mdx
+│   ├── installation.mdx
+│   ├── quickstart.mdx
+│   ├── database-adapter.mdx
+│   ├── adapters/
+│   │   ├── postgresql.mdx
+│   │   ├── mongodb.mdx
+│   │   ├── redis.mdx
+│   │   └── custom.mdx
+│   ├── classes/
+│   │   ├── camarauth-backend.mdx
+│   │   └── camarauth-client.mdx
+│   └── interfaces/
+│       ├── backend-config.mdx
+│       ├── pin-data.mdx
+│       ├── auth-response.mdx
+│       └── user.mdx
+├── react/                       # Documentación de React
+│   ├── overview.mdx
+│   ├── installation.mdx
+│   ├── quickstart.mdx
+│   ├── hooks/
+│   │   ├── use-pin-auth.mdx
+│   │   ├── use-pin-generator.mdx
+│   │   ├── use-countdown.mdx
+│   │   ├── use-auto-regeneration.mdx
+│   │   ├── use-whatsapp-link.mdx
+│   │   └── use-auth-context.mdx
+│   └── interfaces/
+│       ├── pin-auth-options.mdx
+│       ├── pin-auth-state.mdx
+│       ├── pin-generator-options.mdx
+│       ├── countdown-options.mdx
+│       ├── auto-regeneration-options.mdx
+│       └── user.mdx
+├── sdks/                        # Overview de SDKs
+│   ├── overview.mdx
+│   ├── nodejs.mdx
+│   ├── react.mdx
+│   ├── python.mdx
+│   ├── go.mdx
+│   ├── rust.mdx
+│   ├── java.mdx
+│   ├── dotnet.mdx
+│   └── php.mdx
+└── core/                        # Documentación core
+    ├── overview.mdx
+    ├── pin-generator.mdx
+    ├── emoji-encoder.mdx
+    ├── errors.mdx
+    ├── storage.mdx
+    └── jwt-utils.mdx
+```
 
-**[Follow the full quickstart guide](https://starter.mintlify.com/quickstart)**
-
-## AI-assisted writing
-
-Set up your AI coding tool to work with Mintlify:
+## Desarrollo local
 
 ```bash
-npx skills add https://mintlify.com/docs
+# Instalar dependencias
+npm install
+
+# Iniciar servidor de desarrollo
+npm run dev
 ```
 
-This command installs Mintlify's documentation skill for your configured AI tools like Claude Code, Cursor, Windsurf, and others. The skill includes component reference, writing standards, and workflow guidance.
+## Construcción
 
-See the [AI tools guides](/ai-tools) for tool-specific setup.
-
-## Development
-
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview your documentation changes locally. To install, use the following command:
-
-```
-npm i -g mint
+```bash
+npm run validate
+npm run check:links
 ```
 
-Run the following command at the root of your documentation, where your `docs.json` is located:
+## SDKs documentados
 
-```
-mint dev
-```
+- ✅ **Node.js Backend** - Servidor completo con Express y Socket.IO
+- ✅ **React Frontend** - Hooks para integración en React
+- 🚧 **Python** - En desarrollo (FastAPI/Flask)
+- 🚧 **Go** - En desarrollo
+- 🚧 **Rust** - En desarrollo
+- 🚧 **Java** - En desarrollo
+- 🚧 **.NET** - En desarrollo
+- 🚧 **PHP** - En desarrollo
 
-View your local preview at `http://localhost:3000`.
+## Características de la documentación
 
-## Publishing changes
+- 📚 **Clases documentadas** - Todas las clases principales con ejemplos
+- 🔧 **Interfaces** - Documentación completa de TypeScript interfaces
+- 💻 **Ejemplos de código** - Ejemplos prácticos de integración
+- 🎨 **Diseño moderno** - Interfaz inspirada en Auth0 Docs
+- 📱 **Responsive** - Funciona en todos los dispositivos
+- 🔍 **Buscador** - Búsqueda en tiempo real
+- 🌙 **Modo oscuro** - Soporte para dark mode
 
-Install our GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app) to propagate changes from your repo to your deployment. Changes are deployed to production automatically after pushing to the default branch.
+## Contribuir
 
-## Need help?
+Para contribuir a la documentación:
 
-### Troubleshooting
+1. Haz un fork del repositorio
+2. Crea una rama para tu feature
+3. Edita los archivos `.mdx`
+4. Haz commit y push
+5. Crea un Pull Request
 
-- If your dev environment isn't running: Run `mint update` to ensure you have the most recent version of the CLI.
-- If a page loads as a 404: Make sure you are running in a folder with a valid `docs.json`.
+## Tecnologías
 
-### Resources
-- [Mintlify documentation](https://mintlify.com/docs)
+- [Mintlify](https://mintlify.com/) - Plataforma de documentación
+- MDX - Markdown con JSX
+- TypeScript - Tipos para ejemplos de código
+
+## Licencia
+
+MIT © [Camarauth](https://camarauth.com)

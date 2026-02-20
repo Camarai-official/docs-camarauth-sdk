@@ -1,0 +1,253 @@
+---
+title: "Migración"
+description: "Guía de migración entre versiones"
+---
+
+# Guía de Migración
+
+Cómo migrar tu aplicación entre versiones de Camarauth SDK.
+
+## Migración de v2 a v3
+
+### Resumen de Cambios
+
+<CardGroup cols={2}>
+  <Card title="TypeScript" icon="code" color="#3178C6">
+    Soporte completo de TypeScript con tipos incluidos
+  </Card>
+  
+  <Card title="Arquitectura" icon="cube" color="#10B981">
+    Arquitectura modular con separación de responsabilidades
+  </Card>
+  <Card title="Seguridad" icon="shield-check" color="#F59E0B">
+    Mejor seguridad con rate limiting y validación de webhooks
+  </Card>
+  <Card title="Testing" icon="beaker" color="#8B5CF6">
+    Tests exhaustivos incluidos
+  </Card>
+</CardGroup>
+
+### Paso 1: Actualizar Dependencias
+
+```bash
+# Desinstalar versión anterior
+npm uninstall camarauth-lib
+
+# Instalar nueva versión
+npm install camarauth-sdk@^3.0.0
+```
+
+### Paso 2: Actualizar Imports
+
+<CodeGroup>
+
+```typescript Antes (v2)
+const { CamarauthClient } = require('camarauth-lib');
+```
+
+```typescript Después (v3)
+import { CamarauthClient } from 'camarauth-sdk';
+import { CamarauthBackend } from 'camarauth-sdk/backend';
+import { usePinAuth } from 'camarauth-sdk/react';
+```
+
+</CodeGroup>
+
+### Paso 3: Migrar Configuración del Backend
+
+<CodeGroup>
+
+```typescript Antes (v2)
+const backend = new CamarauthBackend({
+  dbConnection: pool, // Conexión directa
+  jwtSecret: process.env.JWT_SECRET
+});
+```
+
+```typescript Después (v3)
+import { PostgreSQLAdapter } from 'camarauth-sdk/backend';
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
+
+const backend = new CamarauthBackend({
+  db: new PostgreSQLAdapter(pool), // Usar adapter
+  jwtSecret: process.env.JWT_SECRET!,
+  // Nuevas opciones de seguridad
+  rateLimit: { enabled: true, maxRequests: 100 },
+  logger: createProductionLogger()
+});
+```
+
+</CodeGroup>
+
+### Paso 4: Migrar Hooks de React
+
+<CodeGroup>
+
+```typescript Antes (v2)
+const { pin, status } = useCamarauth({
+  apiUrl: 'http://localhost:3001'
+});
+```
+
+```typescript Después (v3)
+const {
+  pin,
+  emojiString,
+  timeLeft,
+  formattedTime,
+  status,
+  generate,
+  cancel
+} = usePinAuth({
+  apiUrl: 'http://localhost:3001',
+  whatsappNumber: '+34600123456',
+  maxAutoRegenerations: 3
+});
+```
+
+</CodeGroup>
+
+### Paso 5: Manejo de Errores
+
+<CodeGroup>
+
+```typescript Antes (v2)
+try {
+  await backend.registerPin(pin);
+} catch (error) {
+  console.error(error.message);
+}
+```
+
+```typescript Después (v3)
+import { CamarauthError } from 'camarauth-sdk';
+
+try {
+  await backend.domainService.registerPin({ pin });
+} catch (error) {
+  if (error instanceof CamarauthError) {
+    console.error(`Error ${error.code}: ${error.message}`);
+    // Manejo específico por código de error
+    switch (error.code) {
+      case 'PIN_EXPIRED':
+        // Manejar PIN expirado
+        break;
+      case 'RATE_LIMIT_EXCEEDED':
+        // Manejar rate limit
+        break;
+    }
+  }
+}
+```
+
+</CodeGroup>
+
+### Paso 6: Modelo de Usuario
+
+<CodeGroup>
+
+```typescript Antes (v2)
+const user = {
+  id: 123,
+  first_name: 'Juan',
+  phone: '+34600123456'
+};
+```
+
+```typescript Después (v3)
+import { mapDatabaseRowToUser } from 'camarauth-sdk/backend';
+
+const user = mapDatabaseRowToUser({
+  id: 123,
+  nombre: 'Juan',      // o first_name
+  telefono: '+34600123456'  // o phone
+});
+
+// Acceso a campos
+console.log(user.nombre);     // 'Juan'
+console.log(user.name);       // 'Juan' (alias)
+console.log(user.telefono);   // '+34600123456'
+console.log(user.phone);      // '+34600123456' (alias)
+```
+
+</CodeGroup>
+
+### Paso 7: Webhooks
+
+<CodeGroup>
+
+```typescript Antes (v2)
+app.post('/webhook', webhookHandler);
+```
+
+```typescript Después (v3)
+import { createWebhookMiddleware } from 'camarauth-sdk/server';
+
+app.post('/webhook/evolution', 
+  createWebhookMiddleware({
+    secret: process.env.WEBHOOK_SECRET,
+    onMessage: async (message) => {
+      // Procesar mensaje
+    }
+  })
+);
+```
+
+</CodeGroup>
+
+### Cambios Breaking
+
+<AccordionGroup>
+  
+<Accordion title="Eliminado">
+- `dbConnection`: Usar `DatabaseAdapter`
+- Callbacks antiguos: Usar Promises/async-await
+- Soporte Node.js < 18
+</Accordion>
+
+<Accordion title="Cambiado">
+- Nombres de métodos: camelCase consistente
+- Estructura de respuestas: `success: boolean` siempre presente
+- Códigos de error: Estandarizados
+</Accordion>
+
+<Accordion title="Nuevo">
+- TypeScript obligatorio para tipos
+- Rate limiting integrado
+- Logs estructurados
+- CI/CD pipeline
+</Accordion>
+
+</AccordionGroup>
+
+### Checklist de Migración
+
+- [ ] Actualizar package.json
+- [ ] Migrar imports
+- [ ] Actualizar configuración backend
+- [ ] Migrar hooks React
+- [ ] Actualizar manejo de errores
+- [ ] Migrar modelo de usuario
+- [ ] Actualizar webhooks
+- [ ] Agregar tests
+- [ ] Probar en desarrollo
+- [ ] Desplegar a staging
+- [ ] Desplegar a producción
+
+## Obtener Ayuda
+
+- 📖 [Documentación completa](/)
+- 💬 [Discusiones en GitHub](https://github.com/camarauth/sdk/discussions)
+- 🐛 [Reportar issues](https://github.com/camarauth/sdk/issues)
+
+## Ejemplos de Migración
+
+Puedes apoyarte en estas guías para migrar por bloques:
+
+- [Quickstart Backend](/backend/quickstart)
+- [Quickstart React](/react/quickstart)
+- [Guía de Testing](/guides/testing)

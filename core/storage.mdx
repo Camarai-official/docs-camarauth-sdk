@@ -1,0 +1,117 @@
+---
+title: "Storage"
+description: "Sistema de almacenamiento adaptable"
+---
+
+# Storage
+
+Sistema de almacenamiento adaptable para persistir datos de autenticación.
+
+## Visión General
+
+El SDK proporciona un sistema de almacenamiento flexible que se adapta automáticamente al entorno:
+
+- **Navegador**: Usa localStorage o sessionStorage
+- **Node.js**: Usa almacenamiento en memoria
+- **Testing**: Permite mocks personalizados
+
+## Uso Básico
+
+```typescript
+import { createAuthStorage } from 'camarauth-sdk';
+
+const storage = createAuthStorage();
+
+// Guardar datos
+await storage.save({
+  token: 'jwt-token',
+  refreshToken: 'refresh-token',
+  user: { id: '123', name: 'Juan' }
+});
+
+// Cargar datos
+const data = await storage.load();
+
+// Limpiar datos
+await storage.clear();
+```
+
+## Detección Automática
+
+El SDK detecta automáticamente el mejor storage disponible:
+
+```typescript
+// En navegador con localStorage disponible
+const storage = createAuthStorage();
+// Usa localStorage
+
+// En navegador sin localStorage
+const storage = createAuthStorage();
+// Usa sessionStorage
+
+// En Node.js o SSR
+const storage = createAuthStorage();
+// Usa MemoryStorage
+```
+
+## Configuración Personalizada
+
+```typescript
+const storage = createAuthStorage({
+  key: 'mi-app-auth',           // Clave personalizada
+  storage: customStorage,       // Storage personalizado
+  serialize: (data) => JSON.stringify(data),
+  deserialize: (raw) => JSON.parse(raw)
+});
+```
+
+## Storage Adapter
+
+Puedes crear tu propio adaptador:
+
+```typescript
+import { StorageAdapter } from 'camarauth-sdk';
+
+const customAdapter: StorageAdapter = {
+  getItem: async (key) => {
+    // Implementación personalizada
+    return value;
+  },
+  setItem: async (key, value) => {
+    // Implementación personalizada
+  },
+  removeItem: async (key) => {
+    // Implementación personalizada
+  }
+};
+
+const storage = createAuthStorage({
+  storage: customAdapter
+});
+```
+
+## Métodos
+
+| Método | Descripción |
+|--------|-------------|
+| `save(data)` | Guarda datos de autenticación |
+| `load()` | Carga datos de autenticación |
+| `clear()` | Elimina todos los datos |
+| `exists()` | Verifica si hay datos guardados |
+| `getKey()` | Obtiene la clave de storage |
+
+## Seguridad
+
+<Warning>
+**No almacenes tokens en localStorage en producción** si tu aplicación es vulnerable a XSS. Considera usar httpOnly cookies o memory storage con refresh tokens.
+</Warning>
+
+```typescript
+// Opción segura: Memory + Refresh Token
+const storage = createAuthStorage({
+  storage: createMemoryStorage()
+});
+
+// El token se mantiene solo en memoria
+// Se usa refresh token para renovar la sesión
+```

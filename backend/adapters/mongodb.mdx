@@ -1,0 +1,155 @@
+---
+title: "MongoDB Adapter"
+description: "Adaptador de base de datos para MongoDB"
+---
+
+# MongoDBAdapter
+
+Adaptador para MongoDB usando el driver oficial.
+
+## Instalación
+
+```bash
+npm install @camarauth/sdk mongodb
+```
+
+## Uso básico
+
+```typescript
+import { CamarauthBackend, MongoDBAdapter } from "@camarauth/sdk/server";
+import { MongoClient } from "mongodb";
+
+const client = new MongoClient(process.env.MONGODB_URI!);
+await client.connect();
+
+const adapter = new MongoDBAdapter(client.db("myapp"));
+
+const backend = new CamarauthBackend({
+  port: 3001,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+  database: adapter,
+});
+```
+
+## Opciones de configuración
+
+```typescript
+interface MongoDBOptions {
+  // Nombre de tu colección de usuarios
+  userCollection?: string; // default: 'users'
+
+  // Nombre de colecciones adicionales
+  sessionCollection?: string; // default: 'auth_sessions'
+  verificationCollection?: string; // default: 'verification_codes'
+
+  // Mapeo de campos
+  fieldMapping?: {
+    id?: string; // default: '_id'
+    name?: string; // default: 'name'
+    surname?: string; // default: 'surname'
+    phone?: string; // default: 'phone'
+    email?: string; // default: 'email'
+    estado?: string; // default: 'estado'
+    roles?: string; // default: 'roles'
+  };
+}
+```
+
+## Ejemplo con colección existente
+
+```typescript
+const adapter = new MongoDBAdapter(client.db("myapp"), {
+  userCollection: "customers", // Tu colección existente
+  sessionCollection: "user_sessions",
+  fieldMapping: {
+    id: "_id",
+    name: "firstName",
+    surname: "lastName",
+    phone: "phone",
+    email: "emailAddress",
+    estado: "status",
+    roles: "userRoles",
+  },
+});
+```
+
+## Esquema MongoDB
+
+### Colección de usuarios (usa tu colección existente)
+
+```javascript
+// Tu colección existente
+db.customers.insertOne({
+  _id: ObjectId("..."),
+  firstName: "Juan",
+  lastName: "Pérez",
+  phone: "+1234567890",
+  emailAddress: "juan@example.com",
+  status: "active",
+  userRoles: ["user", "premium"],
+});
+
+// Índice único en teléfono
+db.customers.createIndex({ phone: 1 }, { unique: true });
+```
+
+### Colecciones de Camarauth
+
+```javascript
+// Colección de sesiones
+db.auth_sessions.createIndex({ user_id: 1 }, { unique: true });
+db.auth_sessions.createIndex({ created_at: 1 }, { expireAfterSeconds: 604800 });
+
+// Colección de códigos de verificación
+db.verification_codes.createIndex({ code: 1 }, { unique: true });
+db.verification_codes.createIndex({ expires_at: 1 }, { expireAfterSeconds: 0 });
+```
+
+## Ejemplo completo
+
+```typescript
+import { CamarauthBackend, MongoDBAdapter } from "@camarauth/sdk/server";
+import { MongoClient } from "mongodb";
+
+async function main() {
+  const client = new MongoClient(process.env.MONGODB_URI!);
+  await client.connect();
+
+  const adapter = new MongoDBAdapter(client.db("myapp"), {
+    userCollection: "users",
+    fieldMapping: {
+      name: "firstName",
+      phone: "phone",
+    },
+  });
+
+  const backend = new CamarauthBackend({
+    port: 3001,
+    jwtSecret: process.env.JWT_SECRET!,
+    evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+    evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+    evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+    database: adapter,
+  });
+
+  backend.start();
+}
+
+main();
+```
+
+## Ventajas de MongoDB
+
+- ✅ **Flexible**: Sin esquema rígido
+- ✅ **JSON nativo**: Almacena objetos directamente
+- ✅ **TTL automático**: Expiración de documentos
+- ✅ **Escalable**: Sharding nativo
+- ✅ **Rápido**: Buen rendimiento para lecturas
+
+## Véase también
+
+- [DatabaseAdapter interface](/backend/database-adapter)
+- [PostgreSQL Adapter](/backend/adapters/postgresql)
+- [Redis Adapter](/backend/adapters/redis)

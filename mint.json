@@ -1,0 +1,124 @@
+{
+  "name": "Camarauth SDK",
+  "logo": {
+    "light": "/logo/light.png",
+    "dark": "/logo/dark.png"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#635DFF",
+    "light": "#A5A0FF",
+    "dark": "#4B45CC",
+    "anchors": {
+      "from": "#635DFF",
+      "to": "#A5A0FF"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "GitHub",
+      "url": "https://github.com/camarauth/camarauth-sdk"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Comenzar",
+    "url": "quickstart"
+  },
+  "anchors": [],
+  "navigation": [
+    {
+      "group": "Inicio",
+      "pages": ["index", "quickstart", "docs"]
+    },
+    {
+      "group": "Ruta recomendada",
+      "pages": [
+        "concepts/architecture",
+        "concepts/authentication-flow",
+        "concepts/security",
+        "guides/testing",
+        "guides/error-handling",
+        "guides/deployment",
+        "guides/migration"
+      ]
+    },
+    {
+      "group": "Backend (Node.js)",
+      "pages": [
+        "backend/overview",
+        "backend/installation",
+        "backend/configuration",
+        "backend/quickstart",
+        "backend/database-adapter",
+        "backend/adapters/postgresql",
+        "backend/adapters/mongodb",
+        "backend/adapters/redis",
+        "backend/adapters/custom",
+        "backend/classes/camarauth-backend",
+        "backend/classes/camarauth-client",
+        "backend/interfaces/backend-config",
+        "backend/interfaces/pin-data",
+        "backend/interfaces/auth-response",
+        "backend/interfaces/user"
+      ]
+    },
+    {
+      "group": "React",
+      "pages": [
+        "react/overview",
+        "react/installation",
+        "react/quickstart",
+        "react/hooks/use-pin-auth",
+        "react/hooks/use-pin-generator",
+        "react/hooks/use-countdown",
+        "react/hooks/use-auto-regeneration",
+        "react/hooks/use-whatsapp-link",
+        "react/hooks/use-auth-context",
+        "react/interfaces/pin-auth-options",
+        "react/interfaces/pin-auth-state",
+        "react/interfaces/user",
+        "react/interfaces/pin-generator-options",
+        "react/interfaces/countdown-options",
+        "react/interfaces/auto-regeneration-options"
+      ]
+    },
+    {
+      "group": "Core",
+      "pages": [
+        "core/overview",
+        "core/pin-generator",
+        "core/emoji-encoder",
+        "core/errors",
+        "core/storage",
+        "core/jwt-utils"
+      ]
+    },
+    {
+      "group": "SDKs",
+      "pages": [
+        "sdks/overview",
+        "sdks/nodejs",
+        "sdks/react",
+        "sdks/python",
+        "sdks/go",
+        "sdks/rust",
+        "sdks/java",
+        "sdks/dotnet",
+        "sdks/php"
+      ]
+    },
+    {
+      "group": "API Reference",
+      "pages": [
+        "api-reference",
+        "api-reference/endpoints",
+        "api-reference/websocket",
+        "api-reference/errors"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "github": "https://github.com/camarauth",
+    "twitter": "https://twitter.com/camarauth"
+  }
+}

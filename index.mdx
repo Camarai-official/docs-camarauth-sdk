@@ -1,97 +1,117 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Camarauth SDK"
+description: "Documentación oficial del SDK de autenticación por WhatsApp de Camarauth"
 ---
 
-## Setting up
+# Camarauth SDK
 
-Get your documentation site up and running in minutes.
+## Autenticación segura por WhatsApp
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+Camarauth SDK te permite integrar autenticación sin contraseñas usando WhatsApp en tus aplicaciones. Los usuarios reciben un PIN codificado en emojis que deben enviar a tu número de WhatsApp para verificar su identidad.
 
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Node.js Backend" icon="node" href="/backend/quickstart">
+    Implementa el backend de autenticación con Express y Socket.IO
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="React Frontend" icon="react" href="/react/quickstart">
+    Integra la autenticación en tus aplicaciones React
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Características principales
 
-Everything you need to create world-class documentation.
+- 🔐 **Autenticación sin contraseñas** - Los usuarios no necesitan recordar contraseñas
+- 📱 **WhatsApp como canal** - Usa la app que todos tienen instalada
+- 🎭 **PINs codificados en emojis** - Fácil de recordar y copiar
+- ⚡ **Tiempo real** - WebSockets para respuesta inmediata
+- 🔄 **Auto-regeneración** - PINs se regeneran automáticamente si expiran
+- 🛡️ **JWT seguros** - Tokens con refresh automático
+- 📦 **Fácil integración** - SDK completo para Node.js y React
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Flujo de autenticación
 
-## Need inspiration?
+```mermaid
+sequenceDiagram
+    participant U as Usuario
+    participant F as Frontend (React)
+    participant B as Backend (Node.js)
+    participant W as WhatsApp
+    
+    U->>F: Click "Iniciar sesión"
+    F->>B: Generar PIN
+    B-->>F: PIN + Emojis
+    F->>U: Mostrar QR + Link
+    U->>W: Enviar emojis
+    W->>B: Webhook con PIN
+    B->>B: Verificar PIN
+    B-->>F: Auth Success (JWT)
+    F->>U: Redirigir a dashboard
+```
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+## Instalación rápida
+
+### Backend
+
+```bash
+npm install @camarauth/sdk
+```
+
+```typescript
+import { CamarauthBackend } from '@camarauth/sdk/server';
+
+const backend = new CamarauthBackend({
+  evolutionApiUrl: 'https://tu-evolution-api.com',
+  evolutionApiKey: 'tu-api-key',
+  evolutionInstanceName: 'mi-instancia'
+});
+
+backend.start();
+```
+
+### Frontend
+
+```bash
+npm install @camarauth/sdk
+```
+
+```typescript
+import { usePinAuth } from '@camarauth/sdk/react';
+
+function LoginComponent() {
+  const { pin, emojis, whatsappLink, qrCodeUrl, generate } = usePinAuth({
+    apiUrl: 'http://localhost:3001',
+    whatsappNumber: '+1234567890'
+  });
+
+  return (
+    <div>
+      <button onClick={generate}>Generar PIN</button>
+      {qrCodeUrl && <img src={qrCodeUrl} alt="QR Code" />}
+      <a href={whatsappLink}>Abrir WhatsApp</a>
+    </div>
+  );
+}
+```
+
+## Soporte de plataformas
+
+<CardGroup cols={3}>
+  <Card title="Node.js" icon="node" href="/sdks/nodejs">
+    Backend y servidor
+  </Card>
+  <Card title="React" icon="react" href="/sdks/react">
+    Frontend web
+  </Card>
+  <Card title="Python" icon="python" href="/sdks/python">
+    Próximamente
+  </Card>
+  <Card title="Go" icon="golang" href="/sdks/go">
+    Próximamente
+  </Card>
+  <Card title="Rust" icon="rust" href="/sdks/rust">
+    Próximamente
+  </Card>
+  <Card title="Java" icon="java" href="/sdks/java">
+    Próximamente
+  </Card>
+</CardGroup>

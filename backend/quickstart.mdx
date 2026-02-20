@@ -1,0 +1,164 @@
+---
+title: "Quickstart Backend"
+description: "Guía rápida para configurar el backend de Camarauth"
+---
+
+# Quickstart Backend
+
+Configura tu servidor backend en 5 minutos.
+
+## 1. Crear proyecto
+
+```bash
+mkdir camarauth-server
+cd camarauth-server
+npm init -y
+```
+
+## 2. Instalar dependencias
+
+```bash
+npm install @camarauth/sdk express socket.io cors jsonwebtoken dotenv
+npm install -D typescript ts-node @types/node @types/express @types/cors @types/jsonwebtoken
+```
+
+## 3. Configurar TypeScript
+
+```bash
+npx tsc --init
+```
+
+Edita `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true
+  }
+}
+```
+
+## 4. Crear servidor
+
+```bash
+mkdir src
+touch src/index.ts
+```
+
+```typescript
+// src/index.ts
+import { CamarauthBackend } from '@camarauth/sdk/server';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const backend = new CamarauthBackend({
+  port: 3001,
+  jwtSecret: 'cambia-esto-en-produccion',
+  evolutionApiUrl: 'https://tu-evolution-api.com',
+  evolutionApiKey: 'tu-api-key',
+  evolutionInstanceName: 'mi-instancia',
+  corsOrigins: ['http://localhost:5173']
+});
+
+backend.start();
+```
+
+## 5. Configurar entorno
+
+```bash
+touch .env
+```
+
+```bash
+# .env
+PORT=3001
+JWT_SECRET=tu-secreto-muy-seguro
+EVOLUTION_API_URL=https://tu-evolution-api.com
+EVOLUTION_API_KEY=tu-api-key
+EVOLUTION_INSTANCE_NAME=mi-instancia
+CORS_ORIGINS=http://localhost:5173
+```
+
+## 6. Ejecutar
+
+```bash
+npx ts-node src/index.ts
+```
+
+Verás:
+
+```
+╔══════════════════════════════════════════════════════════╗
+║          🚀 Camarauth Backend Iniciado                   ║
+╠══════════════════════════════════════════════════════════╣
+║  Host:       0.0.0.0:3001 (Todas las interfaces)         ║
+║  Local:      http://localhost:3001                       ║
+╠══════════════════════════════════════════════════════════╣
+║  Evolution API:                                          ║
+║    URL:      https://tu-evolution-api.com                ║
+║    Instance: mi-instancia                                ║
+╚══════════════════════════════════════════════════════════╝
+```
+
+## 7. Configurar webhook en Evolution
+
+Ve a tu panel de Evolution API y configura el webhook:
+
+```
+URL: http://TU-IP:3001/whatsapp-endpoint
+Eventos: messages.upsert
+```
+
+## 8. Probar
+
+```bash
+curl http://localhost:3001/health
+```
+
+Respuesta:
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "activePins": 0,
+  "instance": "mi-instancia"
+}
+```
+
+## Ejemplo con base de datos
+
+```typescript
+import { CamarauthBackend } from '@camarauth/sdk/server';
+import { Pool } from 'pg';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const db = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
+
+const backend = new CamarauthBackend({
+  port: 3001,
+  jwtSecret: process.env.JWT_SECRET!,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+  db  // Opcional, para persistencia
+});
+
+backend.start();
+```
+
+## Siguientes pasos
+
+- [Configuración avanzada](/backend/configuration)
+- [Documentación de la API](/api-reference/endpoints)
+- [Integrar frontend React](/react/quickstart)

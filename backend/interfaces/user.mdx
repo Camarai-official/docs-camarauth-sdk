@@ -1,0 +1,90 @@
+---
+title: "User (Backend)"
+description: "Modelo de usuario retornado por el backend de Camarauth"
+---
+
+# User (Backend)
+
+Modelo base de usuario que el backend devuelve al autenticar una sesion.
+
+## Estructura
+
+```typescript
+interface User {
+  id: string;
+  name: string;
+  surname?: string;
+  phone: string;
+  email?: string;
+  roles: string[];
+  [key: string]: unknown;
+}
+```
+
+## Campos principales
+
+### id
+
+Identificador unico del usuario.
+
+```typescript
+id: string;
+```
+
+### name
+
+Nombre mostrado del usuario.
+
+```typescript
+name: string;
+```
+
+### surname
+
+Apellido opcional.
+
+```typescript
+surname?: string;
+```
+
+### phone
+
+Telefono en formato internacional E.164.
+
+```typescript
+phone: string;
+```
+
+### email
+
+Correo electronico opcional.
+
+```typescript
+email?: string;
+```
+
+### roles
+
+Lista de roles asignados.
+
+```typescript
+roles: string[];
+```
+
+## Ejemplo
+
+```json
+{
+  "id": "123",
+  "name": "Juan",
+  "surname": "Perez",
+  "phone": "+1234567890",
+  "email": "juan@example.com",
+  "roles": ["user", "premium"]
+}
+```
+
+## Vease tambien
+
+- [AuthResponse](/backend/interfaces/auth-response)
+- [PinData](/backend/interfaces/pin-data)

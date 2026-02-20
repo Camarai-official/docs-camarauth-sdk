@@ -1,0 +1,268 @@
+---
+title: "BackendConfig"
+description: "Configuración para el servidor backend de Camarauth"
+---
+
+# BackendConfig
+
+Interface de configuración para inicializar `CamarauthBackend`.
+
+## Propiedades
+
+### port
+
+Puerto en el que escuchará el servidor HTTP.
+
+<ParamField path="port" type="number" default="3001">
+  Puerto del servidor
+</ParamField>
+
+```typescript
+port: 3001
+```
+
+### host
+
+Host en el que escuchará el servidor.
+
+<ParamField path="host" type="string" default="'0.0.0.0'">
+  Host del servidor. '0.0.0.0' escucha en todas las interfaces.
+</ParamField>
+
+```typescript
+host: '0.0.0.0'  // Escucha en todas las interfaces
+```
+
+### jwtSecret
+
+Secreto para firmar los tokens JWT.
+
+<ParamField path="jwtSecret" type="string" required>
+  Secreto para JWT. Debe ser seguro en producción.
+</ParamField>
+
+<Warning>
+  ¡Nunca uses el secreto por defecto en producción!
+</Warning>
+
+```typescript
+jwtSecret: 'tu-secreto-super-seguro-minimo-32-caracteres'
+```
+
+### evolutionApiUrl
+
+URL base de la API de Evolution.
+
+<ParamField path="evolutionApiUrl" type="string" required>
+  URL de tu instancia de Evolution API
+</ParamField>
+
+```typescript
+evolutionApiUrl: 'https://api.evolution.com'
+```
+
+### evolutionApiKey
+
+API Key de Evolution.
+
+<ParamField path="evolutionApiKey" type="string" required>
+  Tu API Key de Evolution
+</ParamField>
+
+```typescript
+evolutionApiKey: 'tu-api-key-aqui'
+```
+
+### evolutionInstanceName
+
+Nombre de la instancia de Evolution.
+
+<ParamField path="evolutionInstanceName" type="string" required>
+  Nombre de la instancia configurada en Evolution
+</ParamField>
+
+```typescript
+evolutionInstanceName: 'mi-instancia-whatsapp'
+```
+
+### pinExpirationMinutes
+
+Tiempo de expiración de los PINs en minutos.
+
+<ParamField path="pinExpirationMinutes" type="number" default="3">
+  Minutos antes de que expire un PIN
+</ParamField>
+
+```typescript
+pinExpirationMinutes: 3  // 3 minutos
+```
+
+### corsOrigins
+
+Orígenes permitidos para CORS.
+
+<ParamField path="corsOrigins" type="string | string[]" default="['http://localhost:3000', 'http://localhost:5173']">
+  URLs permitidas para CORS
+</ParamField>
+
+```typescript
+// Un solo origen
+corsOrigins: 'https://mi-app.com'
+
+// Múltiples orígenes
+corsOrigins: [
+  'http://localhost:5173',
+  'https://mi-app.com',
+  'https://app.mi-dominio.com'
+]
+```
+
+### database
+
+Adaptador de base de datos (opcional). Puede ser PostgreSQL, MongoDB, Redis, o un adaptador personalizado.
+
+<ParamField path="database" type="DatabaseAdapter">
+  Adaptador para persistencia de usuarios y sesiones. Si no se proporciona, usa memoria RAM.
+</ParamField>
+
+#### Opciones disponibles
+
+**PostgreSQL:**
+```typescript
+import { PostgreSQLAdapter } from '@camarauth/sdk/server';
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
+
+const config: BackendConfig = {
+  // ... otras opciones
+  database: new PostgreSQLAdapter(pool)
+};
+```
+
+**MongoDB:**
+```typescript
+import { MongoDBAdapter } from '@camarauth/sdk/server';
+import { MongoClient } from 'mongodb';
+
+const client = new MongoClient(process.env.MONGODB_URI!);
+await client.connect();
+
+const config: BackendConfig = {
+  // ... otras opciones
+  database: new MongoDBAdapter(client.db('myapp'))
+};
+```
+
+**Redis:**
+```typescript
+import { RedisAdapter } from '@camarauth/sdk/server';
+import { createClient } from 'redis';
+
+const redis = createClient({ url: process.env.REDIS_URL });
+await redis.connect();
+
+const config: BackendConfig = {
+  // ... otras opciones
+  database: new RedisAdapter(redis, { userProvider: myUserProvider })
+};
+```
+
+**Sin base de datos (memoria):**
+```typescript
+const config: BackendConfig = {
+  // ... otras opciones
+  // No incluir 'database' - usa memoria RAM
+};
+```
+
+## Ejemplo completo
+
+### Con PostgreSQL
+
+```typescript
+import { CamarauthBackend, BackendConfig, PostgreSQLAdapter } from '@camarauth/sdk/server';
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+const config: BackendConfig = {
+  port: parseInt(process.env.PORT || '3001'),
+  host: process.env.HOST || '0.0.0.0',
+  jwtSecret: process.env.JWT_SECRET!,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+  pinExpirationMinutes: 3,
+  corsOrigins: [
+    'http://localhost:5173',
+    'https://mi-app.com'
+  ],
+  database: new PostgreSQLAdapter(pool)
+};
+
+const backend = new CamarauthBackend(config);
+backend.start();
+```
+
+### Sin base de datos (modo memoria)
+
+```typescript
+import { CamarauthBackend, BackendConfig } from '@camarauth/sdk/server';
+
+const config: BackendConfig = {
+  port: 3001,
+  jwtSecret: process.env.JWT_SECRET!,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+  corsOrigins: ['http://localhost:5173']
+  // Sin 'database' - usa memoria RAM
+};
+
+const backend = new CamarauthBackend(config);
+backend.start();
+```
+
+## Variables de entorno
+
+Puedes usar variables de entorno para configurar el backend:
+
+```bash
+# .env
+PORT=3001
+HOST=0.0.0.0
+JWT_SECRET=tu-secreto-super-seguro
+EVOLUTION_API_URL=https://api.evolution.com
+EVOLUTION_API_KEY=tu-api-key
+EVOLUTION_INSTANCE_NAME=mi-instancia
+PIN_EXPIRATION_MINUTES=3
+CORS_ORIGINS=http://localhost:5173,https://mi-app.com
+DATABASE_URL=postgresql://user:pass@localhost/camarauth
+```
+
+```typescript
+const backend = new CamarauthBackend({
+  port: parseInt(process.env.PORT || '3001'),
+  jwtSecret: process.env.JWT_SECRET!,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!
+});
+```
+
+## Véase también
+
+- [CamarauthBackend class](/backend/classes/camarauth-backend)
+- [PinData interface](/backend/interfaces/pin-data)
+- [DatabaseAdapter interface](/backend/database-adapter)
+- [PostgreSQL Adapter](/backend/adapters/postgresql)
+- [MongoDB Adapter](/backend/adapters/mongodb)
+- [Redis Adapter](/backend/adapters/redis)

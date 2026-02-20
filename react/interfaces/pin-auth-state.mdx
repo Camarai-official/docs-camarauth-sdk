@@ -1,0 +1,295 @@
+---
+title: "PinAuthState"
+description: "Estado retornado por usePinAuth"
+---
+
+# PinAuthState
+
+Estado completo del sistema de autenticación retornado por `usePinAuth`.
+
+## Propiedades
+
+### pin
+
+PIN actual generado.
+
+```typescript
+pin: string | null;
+```
+
+- `null` si no hay PIN activo
+- String de 6 caracteres por defecto
+
+**Ejemplo:**
+
+```typescript
+console.log(auth.pin); // "ABC123" o null
+```
+
+### emojis
+
+Array de emojis que representan el PIN.
+
+```typescript
+emojis: string[]
+```
+
+- Array vacío si no hay PIN
+- Cada elemento es un emoji codificado
+
+**Ejemplo:**
+
+```typescript
+console.log(auth.emojis); // ["🔐", "🔑", "🔒", "🔓", "🗝️", "🛡️"]
+```
+
+### emojiString
+
+PIN como string concatenado de emojis.
+
+```typescript
+emojiString: string;
+```
+
+**Ejemplo:**
+
+```typescript
+console.log(auth.emojiString); // "🔐🔑🔒🔓🗝️🛡️"
+```
+
+### timeLeft
+
+Segundos restantes antes de expirar.
+
+```typescript
+timeLeft: number;
+```
+
+**Ejemplo:**
+
+```typescript
+console.log(auth.timeLeft); // 175 (2 minutos 55 segundos)
+```
+
+### formattedTime
+
+Tiempo formateado como MM:SS.
+
+```typescript
+formattedTime: string;
+```
+
+**Ejemplo:**
+
+```typescript
+console.log(auth.formattedTime); // "02:55"
+```
+
+### isExpired
+
+Indica si el PIN expiró.
+
+```typescript
+isExpired: boolean;
+```
+
+### regenerationCount
+
+Número de regeneraciones realizadas.
+
+```typescript
+regenerationCount: number;
+```
+
+### hasReachedMaxRegenerations
+
+Indica si se alcanzó el máximo de regeneraciones.
+
+```typescript
+hasReachedMaxRegenerations: boolean;
+```
+
+### status
+
+Estado actual de la autenticación.
+
+```typescript
+status: "idle" | "polling" | "success" | "error" | "expired";
+```
+
+| Estado    | Descripción              |
+| --------- | ------------------------ |
+| `idle`    | Sin actividad            |
+| `polling` | Esperando verificación   |
+| `success` | Autenticado exitosamente |
+| `error`   | Ocurrió un error         |
+| `expired` | PIN expirado             |
+
+### isLoading
+
+Indica si está cargando o conectando.
+
+```typescript
+isLoading: boolean;
+```
+
+### user
+
+Datos del usuario autenticado.
+
+```typescript
+user: User | null;
+```
+
+**Ejemplo:**
+
+```typescript
+{
+  id: "123",
+  name: "Juan",
+  surname: "Pérez",
+  phone: "+1234567890",
+  roles: ["user"]
+}
+```
+
+### error
+
+Error actual si existe.
+
+```typescript
+error: CamarauthError | null;
+```
+
+### whatsappLink
+
+Link de WhatsApp con mensaje.
+
+```typescript
+whatsappLink: string;
+```
+
+**Ejemplo:**
+
+```typescript
+console.log(auth.whatsappLink);
+// "https://wa.me/1234567890?text=PIN%3A%20%F0%9F%94%90%F0%9F%94%91"
+```
+
+### qrCodeUrl
+
+URL del QR code para escanear.
+
+```typescript
+qrCodeUrl: string | null;
+```
+
+**Ejemplo:**
+
+```typescript
+<img src={auth.qrCodeUrl} alt="QR Code" />
+```
+
+### fullMessage
+
+Mensaje completo para WhatsApp.
+
+```typescript
+fullMessage: string;
+```
+
+**Ejemplo:**
+
+```typescript
+console.log(auth.fullMessage); // "PIN: 🔐🔑🔒🔓🗝️🛡️"
+```
+
+## Métodos
+
+### generate
+
+Genera un nuevo PIN.
+
+```typescript
+generate: () => void
+```
+
+**Ejemplo:**
+
+```typescript
+<button onClick={auth.generate}>
+  Generar PIN
+</button>
+```
+
+### cancel
+
+Cancela la autenticación actual.
+
+```typescript
+cancel: () => void
+```
+
+**Ejemplo:**
+
+```typescript
+<button onClick={auth.cancel}>
+  Cancelar
+</button>
+```
+
+### reset
+
+Resetea todo el estado.
+
+```typescript
+reset: () => void
+```
+
+**Ejemplo:**
+
+```typescript
+<button onClick={auth.reset}>
+  Comenzar de nuevo
+</button>
+```
+
+## Ejemplo de uso
+
+```tsx
+import { usePinAuth } from "@camarauth/sdk/react";
+
+function AuthDisplay() {
+  const auth = usePinAuth({
+    apiUrl: "http://localhost:3001",
+    whatsappNumber: "+1234567890",
+  });
+
+  return (
+    <div>
+      <p>Estado: {auth.status}</p>
+
+      {auth.pin && (
+        <>
+          <p>Emojis: {auth.emojis.join(" ")}</p>
+          <p>Tiempo: {auth.formattedTime}</p>
+          <p>Expirado: {auth.isExpired ? "Sí" : "No"}</p>
+        </>
+      )}
+
+      {auth.user && <p>Usuario: {auth.user.name}</p>}
+
+      {auth.error && <p className="error">{auth.error.message}</p>}
+
+      <button onClick={auth.generate}>Generar</button>
+      <button onClick={auth.cancel}>Cancelar</button>
+      <button onClick={auth.reset}>Reset</button>
+    </div>
+  );
+}
+```
+
+## Véase también
+
+- [usePinAuth hook](/react/hooks/use-pin-auth)
+- [PinAuthOptions interface](/react/interfaces/pin-auth-options)

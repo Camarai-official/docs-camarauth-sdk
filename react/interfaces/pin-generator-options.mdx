@@ -1,0 +1,66 @@
+---
+title: "PinGeneratorOptions"
+description: "Opciones de configuracion para usePinGenerator"
+---
+
+# PinGeneratorOptions
+
+Configura el comportamiento del hook `usePinGenerator`.
+
+## Estructura
+
+```typescript
+interface PinGeneratorOptions {
+  length?: number;
+  characters?: string;
+}
+```
+
+## Propiedades
+
+### length
+
+Cantidad de caracteres a generar.
+
+```typescript
+length?: number;
+```
+
+- Default: `6`
+- Recomendado: entre `4` y `10`
+
+### characters
+
+Conjunto de caracteres permitidos para el PIN.
+
+```typescript
+characters?: string;
+```
+
+- Default: `ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789`
+
+## Ejemplo
+
+```tsx
+import { usePinGenerator } from "@camarauth/sdk/react";
+
+function CustomPin() {
+  const { pin, emojiString, regenerate } = usePinGenerator({
+    length: 8,
+    characters: "ABCDEFGHJKLMNPQRSTUVWXYZ23456789",
+  });
+
+  return (
+    <div>
+      <p>{pin}</p>
+      <p>{emojiString}</p>
+      <button onClick={regenerate}>Regenerar</button>
+    </div>
+  );
+}
+```
+
+## Vease tambien
+
+- [usePinGenerator](/react/hooks/use-pin-generator)
+- [PinAuthOptions](/react/interfaces/pin-auth-options)

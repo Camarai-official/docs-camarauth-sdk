@@ -1,0 +1,205 @@
+---
+title: "Instalación"
+description: "Guía de instalación del SDK de React"
+---
+
+# Instalación
+
+## Requisitos
+
+- Node.js 18 o superior
+- React 18 o superior
+- npm, yarn o pnpm
+
+## Instalación del SDK
+
+```bash
+npm install @camarauth/sdk
+# o
+yarn add @camarauth/sdk
+# o
+pnpm add @camarauth/sdk
+```
+
+## Dependencias peer
+
+El SDK requiere estas dependencias (se instalan automáticamente):
+
+- `react` >= 18.0.0
+- `react-dom` >= 18.0.0
+- `socket.io-client` >= 4.0.0
+
+## Verificación de instalación
+
+```bash
+# Verificar que está instalado
+npm list @camarauth/sdk
+
+# Debería mostrar:
+# @camarauth/sdk@x.x.x
+```
+
+## Configuración de TypeScript
+
+Si usas TypeScript, el SDK incluye tipos automáticamente.
+
+### tsconfig.json recomendado
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}
+```
+
+## Configuración de Vite
+
+### vite.config.ts
+
+```typescript
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      }
+    }
+  }
+})
+```
+
+## Configuración de Next.js
+
+### next.config.js
+
+```javascript
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:3001/:path*'
+      }
+    ]
+  }
+}
+
+module.exports = nextConfig
+```
+
+## Configuración de Create React App
+
+### package.json
+
+```json
+{
+  "proxy": "http://localhost:3001"
+}
+```
+
+O en `.env`:
+
+```
+REACT_APP_CAMARAUTH_API_URL=http://localhost:3001
+```
+
+## Variables de entorno
+
+### Vite (.env)
+
+```bash
+VITE_CAMARAUTH_API_URL=http://localhost:3001
+VITE_WHATSAPP_NUMBER=+1234567890
+```
+
+### Next.js (.env.local)
+
+```bash
+NEXT_PUBLIC_CAMARAUTH_API_URL=http://localhost:3001
+NEXT_PUBLIC_WHATSAPP_NUMBER=+1234567890
+```
+
+### Create React App (.env)
+
+```bash
+REACT_APP_CAMARAUTH_API_URL=http://localhost:3001
+REACT_APP_WHATSAPP_NUMBER=+1234567890
+```
+
+## Uso básico
+
+```tsx
+import { usePinAuth } from '@camarauth/sdk/react';
+
+function App() {
+  const auth = usePinAuth({
+    apiUrl: import.meta.env.VITE_CAMARAUTH_API_URL,
+    whatsappNumber: import.meta.env.VITE_WHATSAPP_NUMBER
+  });
+
+  return (
+    <div>
+      <button onClick={auth.generate}>
+        Generar PIN
+      </button>
+    </div>
+  );
+}
+```
+
+## Troubleshooting
+
+### Error: "Cannot find module"
+
+```bash
+# Limpiar caché
+rm -rf node_modules
+rm package-lock.json
+npm install
+```
+
+### Error: "React is not defined"
+
+Asegúrate de tener React 18+:
+
+```bash
+npm install react@^18.0.0 react-dom@^18.0.0
+```
+
+### Error: "socket.io-client not found"
+
+Instala manualmente:
+
+```bash
+npm install socket.io-client
+```
+
+## Siguientes pasos
+
+- [Quickstart](/react/quickstart)
+- [Hooks](/react/hooks/use-pin-auth)
+- [Interfaces](/react/interfaces/pin-auth-options)

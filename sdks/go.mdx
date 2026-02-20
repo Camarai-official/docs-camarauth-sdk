@@ -1,0 +1,77 @@
+---
+title: "Go SDK"
+description: "Documentación del SDK de Go para Camarauth"
+---
+
+# Go SDK
+
+🚧 **En desarrollo**
+
+El SDK de Go para Camarauth está actualmente en desarrollo.
+
+## Estado del proyecto
+
+- [ ] Estructura base del módulo
+- [ ] Servidor HTTP nativo
+- [ ] WebSocket con gorilla/websocket
+- [ ] Integración con Evolution API
+- [ ] JWT con golang-jwt/jwt
+- [ ] Tests
+- [ ] Documentación
+
+## Características planeadas
+
+- **Alto rendimiento**: Goroutines para concurrencia
+- **Bajo consumo**: Binario nativo compilado
+- **WebSocket**: Gorilla websocket
+- **Webhooks**: Manejo de webhooks Evolution
+- **JWT**: github.com/golang-jwt/jwt
+- **Configuración**: Soporte para env vars, flags, config files
+
+## Estructura propuesta
+
+```go
+// Ejemplo de uso futuro
+package main
+
+import (
+    "log"
+    "github.com/camarauth/sdk-go"
+)
+
+func main() {
+    backend, err := camarauth.NewBackend(camarauth.Config{
+        Port:                  3001,
+        JWTSecret:            "tu-secreto",
+        EvolutionAPIURL:      "https://api.evolution.com",
+        EvolutionAPIKey:      "tu-api-key",
+        EvolutionInstanceName: "mi-instancia",
+    })
+    
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    backend.Start()
+}
+```
+
+## Contribuir
+
+¿Quieres ayudar con el desarrollo del SDK de Go?
+
+1. Revisa nuestro [GitHub](https://github.com/camarauth/camarauth-sdk-go)
+2. Únete a nuestra comunidad en Discord
+3. Abre un issue o pull request
+
+## Roadmap
+
+- **Alpha**: Q2 2025
+- **Beta**: Q3 2025
+- **Release**: Q3 2025
+
+---
+
+<Note>
+  Suscríbete a nuestras notificaciones para estar al tanto del lanzamiento del SDK de Go.
+</Note>

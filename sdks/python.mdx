@@ -1,0 +1,73 @@
+---
+title: "Python SDK"
+description: "Documentación del SDK de Python para Camarauth"
+---
+
+# Python SDK
+
+🚧 **En desarrollo**
+
+El SDK de Python para Camarauth está actualmente en desarrollo. 
+
+## Estado del proyecto
+
+- [ ] Estructura base del proyecto
+- [ ] Servidor HTTP con FastAPI
+- [ ] WebSocket con python-socketio
+- [ ] Integración con Evolution API
+- [ ] JWT implementation
+- [ ] Tests unitarios
+- [ ] Documentación
+
+## Características planeadas
+
+- **FastAPI/Flask**: Soporte para ambos frameworks
+- **Async/await**: Programación asíncrona nativa
+- **WebSocket**: Comunicación en tiempo real
+- **Webhooks**: Integración con Evolution API
+- **SQLAlchemy**: Soporte para múltiples bases de datos
+- **Pydantic**: Validación de datos
+
+## Estructura propuesta
+
+```python
+# Ejemplo de uso futuro
+from camarauth import CamarauthBackend
+
+backend = CamarauthBackend(
+    port=3001,
+    jwt_secret="tu-secreto",
+    evolution_api_url="https://api.evolution.com",
+    evolution_api_key="tu-api-key",
+    evolution_instance_name="mi-instancia"
+)
+
+backend.start()
+```
+
+## Contribuir
+
+¿Quieres ayudar con el desarrollo del SDK de Python?
+
+1. Revisa nuestro [GitHub](https://github.com/camarauth/camarauth-sdk-python)
+2. Únete a nuestra comunidad en Discord
+3. Abre un issue o pull request
+
+## Alternativas actuales
+
+Mientras tanto, puedes usar:
+
+- [Node.js SDK](/sdks/nodejs) con integración vía HTTP API
+- Implementación directa usando las [APIs REST](/api-reference/endpoints)
+
+## Roadmap
+
+- **Alpha**: Q1 2025
+- **Beta**: Q2 2025
+- **Release**: Q2 2025
+
+---
+
+<Note>
+  Suscríbete a nuestras notificaciones para estar al tanto del lanzamiento del SDK de Python.
+</Note>

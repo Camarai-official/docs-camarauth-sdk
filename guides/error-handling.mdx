@@ -1,0 +1,491 @@
+---
+title: "Manejo de Errores"
+description: "Cómo manejar errores de forma robusta en Camarauth SDK"
+---
+
+# Manejo de Errores
+
+Una guía completa sobre cómo manejar errores de manera efectiva, desde los casos más comunes hasta situaciones edge case.
+
+## Jerarquía de Errores
+
+Camarauth SDK usa una jerarquía clara de errores basada en `CamarauthError`:
+
+```
+Error (Nativo JS)
+└── CamarauthError (Base del SDK)
+    ├── PinExpiredError
+    ├── RefreshTokenExpiredError
+    ├── AuthenticationError
+    ├── NetworkError
+    └── ValidationError
+```
+
+## Tipos de Errores
+
+### Errores de PIN
+
+<CodeGroup>
+
+```typescript PIN Expirado
+try {
+  const result = await client.checkLogin(pin);
+} catch (error) {
+  if (error instanceof CamarauthError) {
+    switch (error.code) {
+      case 'PIN_EXPIRED':
+        // El PIN ha expirado después de 3 minutos
+        showToast('Tu código ha expirado. Genera uno nuevo.');
+        regeneratePin();
+        break;
+        
+      case 'PIN_NOT_FOUND':
+        // PIN no existe o fue limpiado
+        showToast('Código inválido. Intenta de nuevo.');
+        break;
+        
+      case 'PIN_ALREADY_VERIFIED':
+        // PIN ya fue usado por otro usuario
+        showToast('Este código ya fue utilizado.');
+        break;
+    }
+  }
+}
+```
+
+```typescript Rate Limiting
+try {
+  await client.registerPin(pin);
+} catch (error) {
+  if (error.code === 'RATE_LIMIT_EXCEEDED') {
+    // Demasiados intentos
+    const retryAfter = error.details?.retryAfter || 60;
+    showToast(`Demasiados intentos. Espera ${retryAfter} segundos.`);
+  }
+}
+```
+
+</CodeGroup>
+
+### Errores de Autenticación
+
+<AccordionGroup>
+  
+<Accordion title="Token Expirado">
+```typescript
+try {
+  const user = await client.getProfile(token);
+} catch (error) {
+  if (error.code === 'TOKEN_EXPIRED') {
+    // Intentar refrescar token automáticamente
+    try {
+      const { token: newToken } = await client.refreshToken(refreshToken);
+      saveToken(newToken);
+      
+      // Reintentar request original
+      const user = await client.getProfile(newToken);
+    } catch (refreshError) {
+      // Si falla el refresh, redirigir a login
+      redirectToLogin();
+    }
+  }
+}
+```
+</Accordion>
+
+<Accordion title="Token Inválido">
+```typescript
+if (error.code === 'TOKEN_INVALID' || error.code === 'TOKEN_NOT_PROVIDED') {
+  // Token manipulado o no proporcionado
+  // Limpiar sesión y redirigir
+  clearSession();
+  redirectToLogin();
+}
+```
+</Accordion>
+
+<Accordion title="Refresh Token Expirado">
+```typescript
+if (error.code === 'REFRESH_TOKEN_EXPIRED') {
+  // La sesión ha expirado completamente
+  // Usuario debe autenticarse de nuevo
+  clearSession();
+  showToast('Tu sesión ha expirado. Por favor inicia sesión de nuevo.');
+  redirectToLogin();
+}
+```
+</Accordion>
+
+</AccordionGroup>
+
+### Errores de Red
+
+```typescript
+try {
+  await client.registerPin(pin);
+} catch (error) {
+  if (error.code === 'NETWORK_ERROR') {
+    // Sin conexión a internet
+    showToast('Sin conexión. Verifica tu red.');
+    
+    // Opcional: Reintentar automáticamente
+    setTimeout(() => {
+      retryRegistration();
+    }, 3000);
+  }
+  
+  if (error.code === 'SOCKET_ERROR') {
+    // Error de conexión WebSocket
+    console.error('WebSocket error:', error);
+    
+    // Intentar reconectar
+    reconnectSocket();
+  }
+}
+```
+
+## Patrones de Manejo
+
+### 1. Error Boundary (React)
+
+```tsx
+// components/ErrorBoundary.tsx
+import { Component, ErrorInfo, ReactNode } from 'react';
+import { CamarauthError } from 'camarauth-sdk';
+
+interface Props {
+  children: ReactNode;
+  fallback?: ReactNode;
+}
+
+interface State {
+  hasError: boolean;
+  error: CamarauthError | null;
+}
+
+export class AuthErrorBoundary extends Component<Props, State> {
+  state: State = {
+    hasError: false,
+    error: null
+  };
+
+  static getDerivedStateFromError(error: CamarauthError): State {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: CamarauthError, errorInfo: ErrorInfo) {
+    console.error('Auth error:', error);
+    console.error('Error info:', errorInfo);
+    
+    // Reportar a servicio de monitoreo
+    reportError(error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <ErrorDisplay 
+          error={this.state.error}
+          onRetry={() => this.setState({ hasError: false, error: null })}
+        />
+      );
+    }
+
+    return this.props.children;
+  }
+}
+```
+
+### 2. Componente de Error Reutilizable
+
+```tsx
+// components/ErrorDisplay.tsx
+import { CamarauthError } from 'camarauth-sdk';
+
+interface ErrorDisplayProps {
+  error: CamarauthError | null;
+  onRetry?: () => void;
+  onDismiss?: () => void;
+}
+
+const errorConfig: Record<string, { icon: string; title: string; message: string; action: string }> = {
+  PIN_EXPIRED: {
+    icon: '⏰',
+    title: 'PIN Expirado',
+    message: 'Tu código ha expirado. Genera uno nuevo.',
+    action: 'retry'
+  },
+  NETWORK_ERROR: {
+    icon: '📡',
+    title: 'Sin Conexión',
+    message: 'Verifica tu conexión a internet.',
+    action: 'retry'
+  },
+  RATE_LIMIT_EXCEEDED: {
+    icon: '🚦',
+    title: 'Demasiados Intentos',
+    message: 'Has alcanzado el límite. Intenta más tarde.',
+    action: 'wait'
+  },
+  default: {
+    icon: '⚠️',
+    title: 'Error',
+    message: 'Ocurrió un error inesperado.',
+    action: 'retry'
+  }
+};
+
+export function ErrorDisplay({ error, onRetry, onDismiss }: ErrorDisplayProps) {
+  if (!error) return null;
+
+  const config = errorConfig[error.code] || errorConfig.default;
+
+  return (
+    <div className="error-container">
+      <div className="error-icon">{config.icon}</div>
+      <h3>{config.title}</h3>
+      <p>{config.message}</p>
+      
+      {config.action === 'retry' && onRetry && (
+        <button onClick={onRetry} className="retry-button">
+          Intentar de Nuevo
+        </button>
+      )}
+      
+      {onDismiss && (
+        <button onClick={onDismiss} className="dismiss-button">
+          Cerrar
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+### 3. Hook de Manejo de Errores
+
+```typescript
+// hooks/useAuthError.ts
+import { useState, useCallback } from 'react';
+import { CamarauthError } from 'camarauth-sdk';
+
+export function useAuthError() {
+  const [error, setError] = useState<CamarauthError | null>(null);
+
+  const handleError = useCallback((err: unknown) => {
+    if (err instanceof CamarauthError) {
+      setError(err);
+      
+      // Log para debugging
+      console.error('Auth Error:', {
+        code: err.code,
+        message: err.message,
+        statusCode: err.statusCode,
+        timestamp: new Date().toISOString()
+      });
+      
+      return err;
+    }
+    
+    // Error no manejado
+    const unknownError = new CamarauthError(
+      'Error desconocido',
+      'UNKNOWN_ERROR'
+    );
+    setError(unknownError);
+    return unknownError;
+  }, []);
+
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  return { error, handleError, clearError };
+}
+```
+
+### 4. Retry con Backoff
+
+```typescript
+// utils/retry.ts
+export async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  baseDelay = 1000
+): Promise<T> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+      
+      // Solo reintentar errores recuperables
+      if (!isRetryableError(error)) {
+        throw error;
+      }
+      
+      // Backoff exponencial con jitter
+      const jitter = Math.random() * baseDelay;
+      const delay = (baseDelay * Math.pow(2, i)) + jitter;
+      
+      console.log(`Retry ${i + 1}/${maxRetries} after ${delay}ms`);
+      await sleep(delay);
+    }
+  }
+  
+  throw new Error('Unreachable');
+}
+
+function isRetryableError(error: any): boolean {
+  const retryableCodes = [
+    'NETWORK_ERROR',
+    'SOCKET_ERROR',
+    'TIMEOUT_ERROR',
+    'RATE_LIMIT_EXCEEDED'
+  ];
+  
+  return retryableCodes.includes(error?.code);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+```
+
+## UX para Errores
+
+### Estados de UI
+
+```tsx
+function AuthPage() {
+  const { status, error, generate } = usePinAuth({...});
+  const { handleError } = useAuthError();
+
+  return (
+    <div>
+      {status === 'idle' && (
+        <button onClick={generate}>Generar PIN</button>
+      )}
+      
+      {status === 'polling' && (
+        <LoadingState message="Esperando verificación..." />
+      )}
+      
+      {status === 'error' && error && (
+        <ErrorDisplay 
+          error={error}
+          onRetry={generate}
+        />
+      )}
+      
+      {status === 'expired' && (
+        <div>
+          <p>El PIN expiró</p>
+          <button onClick={generate}>Reintentar</button>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### Toast Notifications
+
+```typescript
+import { toast } from 'sonner';
+
+function useAuthNotifications() {
+  const {
+    status,
+    error
+  } = usePinAuth({
+    ...options,
+    onSuccess: (user) => {
+      toast.success(`¡Bienvenido, ${user.name}!`, {
+        description: 'Has iniciado sesión correctamente'
+      });
+    },
+    onError: (error) => {
+      toast.error('Error de autenticación', {
+        description: getUserFriendlyMessage(error)
+      });
+    },
+    onExpire: () => {
+      toast.warning('PIN expirado', {
+        description: 'Genera un nuevo PIN para continuar'
+      });
+    }
+  });
+
+  return { status };
+}
+
+function getUserFriendlyMessage(error: CamarauthError): string {
+  const messages: Record<string, string> = {
+    PIN_EXPIRED: 'Tu código ha expirado',
+    NETWORK_ERROR: 'Problema de conexión',
+    RATE_LIMIT_EXCEEDED: 'Demasiados intentos',
+    TOKEN_EXPIRED: 'Tu sesión expiró',
+    default: 'Error desconocido'
+  };
+  
+  return messages[error.code] || messages.default;
+}
+```
+
+## Logging de Errores
+
+### Error Reporter
+
+```typescript
+// utils/error-reporter.ts
+interface ErrorContext {
+  userId?: string;
+  pin?: string;
+  timestamp: number;
+  userAgent: string;
+  url: string;
+}
+
+class ErrorReporter {
+  report(error: Error, context?: Partial<ErrorContext>) {
+    const fullContext: ErrorContext = {
+      timestamp: Date.now(),
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+      ...context
+    };
+
+    // Enviar al backend
+    fetch('/api/log-error', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: error.message,
+        stack: error.stack,
+        context: fullContext
+      })
+    }).catch(console.error);
+
+    // Log en desarrollo
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[ErrorReporter]', error, fullContext);
+    }
+  }
+}
+
+export const errorReporter = new ErrorReporter();
+```
+
+## Checklist de Manejo de Errores
+
+- [ ] Capturar todos los errores posibles del SDK
+- [ ] Diferenciar errores recuperables vs no recuperables
+- [ ] Implementar retry con backoff para errores de red
+- [ ] Mostrar mensajes amigables al usuario (no técnicos)
+- [ ] Loguear errores para debugging
+- [ ] Manejar timeouts apropiadamente
+- [ ] Implementar refresh automático de tokens
+- [ ] Proporcionar acciones de recuperación (retry, logout)
+- [ ] Validar inputs antes de enviar al servidor
+- [ ] Usar Error Boundaries en React

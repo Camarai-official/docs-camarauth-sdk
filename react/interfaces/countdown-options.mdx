@@ -1,0 +1,67 @@
+---
+title: "CountdownOptions"
+description: "Opciones de configuracion para useCountdown"
+---
+
+# CountdownOptions
+
+Opciones para controlar el temporizador de `useCountdown`.
+
+## Estructura
+
+```typescript
+interface CountdownOptions {
+  seconds: number;
+  autoStart?: boolean;
+  onExpire?: () => void;
+}
+```
+
+## Propiedades
+
+### seconds
+
+Tiempo inicial en segundos.
+
+```typescript
+seconds: number;
+```
+
+### autoStart
+
+Inicia el countdown automaticamente al montar el componente.
+
+```typescript
+autoStart?: boolean;
+```
+
+- Default: `false`
+
+### onExpire
+
+Callback que se ejecuta una sola vez cuando llega a `0`.
+
+```typescript
+onExpire?: () => void;
+```
+
+## Ejemplo
+
+```tsx
+import { useCountdown } from "@camarauth/sdk/react";
+
+function PinTimer() {
+  const { formattedTime, isExpired } = useCountdown({
+    seconds: 180,
+    autoStart: true,
+    onExpire: () => console.log("PIN expirado"),
+  });
+
+  return <p>{isExpired ? "Expirado" : formattedTime}</p>;
+}
+```
+
+## Vease tambien
+
+- [useCountdown](/react/hooks/use-countdown)
+- [PinAuthState](/react/interfaces/pin-auth-state)

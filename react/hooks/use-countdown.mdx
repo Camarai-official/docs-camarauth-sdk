@@ -1,0 +1,131 @@
+---
+title: "useCountdown"
+description: "Hook de temporizador para React"
+---
+
+# useCountdown
+
+Hook para crear un temporizador cuenta regresiva.
+
+## Uso
+
+```typescript
+import { useCountdown } from '@camarauth/sdk/react';
+
+function Timer() {
+  const { timeLeft, formattedTime, isExpired, start, restart } = useCountdown({
+    seconds: 180,
+    onExpire: () => console.log('¡Expiró!')
+  });
+
+  return (
+    <div>
+      <p>Tiempo restante: {formattedTime}</p>
+      {isExpired && <p>¡Tiempo agotado!</p>}
+      <button onClick={start}>Iniciar</button>
+      <button onClick={() => restart(180)}>Reiniciar</button>
+    </div>
+  );
+}
+```
+
+## Parámetros
+
+<ParamField path="options" type="CountdownOptions" required>
+  Opciones del temporizador
+</ParamField>
+
+### CountdownOptions
+
+<ParamField path="seconds" type="number" required>
+  Segundos iniciales
+</ParamField>
+
+<ParamField path="autoStart" type="boolean" default="false">
+  Iniciar automáticamente
+</ParamField>
+
+<ParamField path="onExpire" type="() => void">
+  Callback cuando expira
+</ParamField>
+
+## Valor de retorno
+
+<ResponseField name="timeLeft" type="number">
+  Segundos restantes
+</ResponseField>
+
+<ResponseField name="formattedTime" type="string">
+  Tiempo formateado como MM:SS
+</ResponseField>
+
+<ResponseField name="isExpired" type="boolean">
+  Si el tiempo expiró
+</ResponseField>
+
+<ResponseField name="isRunning" type="boolean">
+  Si el temporizador está corriendo
+</ResponseField>
+
+<ResponseField name="start" type="() => void">
+  Iniciar el temporizador
+</ResponseField>
+
+<ResponseField name="stop" type="() => void">
+  Detener el temporizador
+</ResponseField>
+
+<ResponseField name="restart" type="(seconds?: number) => void">
+  Reiniciar con nuevos segundos
+</ResponseField>
+
+## Ejemplo
+
+```tsx
+import { useCountdown } from '@camarauth/sdk/react';
+
+function ExamTimer() {
+  const { 
+    formattedTime, 
+    isExpired, 
+    isRunning,
+    start, 
+    stop, 
+    restart 
+  } = useCountdown({
+    seconds: 3600, // 1 hora
+    onExpire: () => alert('¡Tiempo de examen terminado!')
+  });
+
+  return (
+    <div className={`timer ${isExpired ? 'expired' : ''}`}>
+      <div className="time-display">
+        {formattedTime}
+      </div>
+      
+      <div className="controls">
+        {!isRunning ? (
+          <button onClick={start}>▶️ Iniciar</button>
+        ) : (
+          <button onClick={stop}>⏸️ Pausar</button>
+        )}
+        
+        <button onClick={() => restart(3600)}>
+          🔄 Reiniciar
+        </button>
+      </div>
+      
+      {isExpired && (
+        <div className="expired-message">
+          ⏰ ¡Tiempo agotado!
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+## Véase también
+
+- [usePinAuth](/react/hooks/use-pin-auth)
+- [CountdownOptions interface](/react/interfaces/countdown-options)

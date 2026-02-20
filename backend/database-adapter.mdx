@@ -1,0 +1,449 @@
+---
+title: "DatabaseAdapter Interface"
+description: "Interfaz universal para integrar cualquier base de datos"
+---
+
+# DatabaseAdapter
+
+La interfaz `DatabaseAdapter` permite integrar Camarauth con **cualquier tipo de base de datos**: PostgreSQL, MySQL, MongoDB, Redis, DynamoDB, Firebase, o incluso APIs externas.
+
+## Concepto
+
+En lugar de depender directamente de `pg.Pool`, el SDK ahora usa una interfaz abstracta:
+
+```typescript
+interface DatabaseAdapter {
+  // Operaciones de usuario
+  findUserByPhone(phone: string): Promise<User | null>;
+  createUser(userData: CreateUserData): Promise<User>;
+  updateUser(userId: string, data: Partial<User>): Promise<User>;
+
+  // Operaciones de sesión
+  saveSession(userId: string, refreshToken: string): Promise<void>;
+  getSession(userId: string): Promise<Session | null>;
+  invalidateSession(userId: string): Promise<void>;
+
+  // Operaciones de códigos de verificación (opcional)
+  saveVerificationCode?(code: string, data: VerificationData): Promise<void>;
+  updateVerificationCode?(
+    code: string,
+    data: Partial<VerificationData>,
+  ): Promise<void>;
+}
+```
+
+## Implementaciones incluidas
+
+El SDK incluye adaptadores listos para usar:
+
+<CardGroup cols={2}>
+  
+  <Card title="PostgreSQLAdapter" icon="database" href="#postgresql">
+    Para PostgreSQL, MySQL, SQLite (cualquier SQL con interfaz similar a pg)
+  </Card>
+  
+  <Card title="MongoDBAdapter" icon="leaf" href="#mongodb">
+    Para MongoDB usando el driver oficial
+  </Card>
+  
+  <Card title="RedisAdapter" icon="server" href="#redis">
+    Para Redis (solo sesiones y caché)
+  </Card>
+  
+  <Card title="CustomAdapter" icon="code" href="#adaptador-personalizado">
+    Crea tu propio adaptador para cualquier otro sistema
+  </Card>
+
+</CardGroup>
+
+## PostgreSQL
+
+### Instalación
+
+```bash
+npm install @camarauth/sdk pg
+```
+
+### Uso básico
+
+```typescript
+import { CamarauthBackend, PostgreSQLAdapter } from "@camarauth/sdk/server";
+import { Pool } from "pg";
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+const backend = new CamarauthBackend({
+  port: 3001,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+  database: new PostgreSQLAdapter(pool, {
+    // Opciones de mapeo de tablas/columnas
+    tablePrefix: "camarauth_",
+    userTable: "users", // Tu tabla existente
+    userIdColumn: "id", // Tu columna ID
+    userNameColumn: "first_name", // Tu columna de nombre
+    userPhoneColumn: "phone", // Tu columna de teléfono
+    userEmailColumn: "email", // Tu columna de email
+    userStatusColumn: "status", // Tu columna de estado
+  }),
+});
+
+backend.start();
+```
+
+### Esquema SQL mínimo
+
+```sql
+-- Tabla de usuarios (puedes usar tu tabla existente)
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  first_name VARCHAR(255),
+  last_name VARCHAR(255),
+  phone VARCHAR(20) UNIQUE,
+  email VARCHAR(255),
+  status VARCHAR(20) DEFAULT 'active',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla de sesiones
+CREATE TABLE IF NOT EXISTS camarauth_sessions (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id),
+  refresh_token TEXT NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla de códigos de verificación (opcional)
+CREATE TABLE IF NOT EXISTS camarauth_verification_codes (
+  code VARCHAR(10) PRIMARY KEY,
+  user_id INTEGER,
+  phone_number VARCHAR(20),
+  status VARCHAR(20) DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  expires_at TIMESTAMP
+);
+```
+
+## MongoDB
+
+### Instalación
+
+```bash
+npm install @camarauth/sdk mongodb
+```
+
+### Uso básico
+
+```typescript
+import { CamarauthBackend, MongoDBAdapter } from "@camarauth/sdk/server";
+import { MongoClient } from "mongodb";
+
+const client = new MongoClient(process.env.MONGODB_URI!);
+await client.connect();
+
+const backend = new CamarauthBackend({
+  port: 3001,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+  database: new MongoDBAdapter(client.db("myapp"), {
+    userCollection: "users", // Tu colección existente
+    sessionCollection: "auth_sessions", // Nombre para sesiones
+    verificationCollection: "verification_codes",
+    // Mapeo de campos
+    fieldMapping: {
+      id: "_id",
+      name: "firstName",
+      surname: "lastName",
+      phone: "phone",
+      email: "email",
+      estado: "status",
+    },
+  }),
+});
+
+backend.start();
+```
+
+### Esquema MongoDB
+
+```javascript
+// Colección users (existente)
+db.users.createIndex({ phone: 1 }, { unique: true });
+
+// Colección auth_sessions
+// Se crea automáticamente, pero puedes añadir índices:
+db.auth_sessions.createIndex({ user_id: 1 }, { unique: true });
+db.auth_sessions.createIndex({ created_at: 1 }, { expireAfterSeconds: 604800 }); // 7 días
+
+// Colección verification_codes
+db.verification_codes.createIndex({ code: 1 }, { unique: true });
+db.verification_codes.createIndex({ expires_at: 1 }, { expireAfterSeconds: 0 });
+```
+
+## Redis
+
+### Instalación
+
+```bash
+npm install @camarauth/sdk redis
+```
+
+### Uso básico
+
+```typescript
+import { CamarauthBackend, RedisAdapter } from "@camarauth/sdk/server";
+import { createClient } from "redis";
+
+const redis = createClient({
+  url: process.env.REDIS_URL,
+});
+await redis.connect();
+
+const backend = new CamarauthBackend({
+  port: 3001,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+  database: new RedisAdapter(redis, {
+    // Para Redis necesitas una fuente de usuarios
+    // porque Redis no es para datos persistentes
+    userProvider: {
+      // Puede ser un API externa
+      findByPhone: async (phone) => {
+        // Llamar a tu API de usuarios
+        const response = await fetch(
+          `https://api.tuapp.com/users?phone=${phone}`,
+        );
+        return response.json();
+      },
+      create: async (userData) => {
+        // Crear usuario via API
+        const response = await fetch("https://api.tuapp.com/users", {
+          method: "POST",
+          body: JSON.stringify(userData),
+        });
+        return response.json();
+      },
+    },
+    keyPrefix: "camarauth:",
+    sessionTTL: 604800, // 7 días en segundos
+  }),
+});
+
+backend.start();
+```
+
+## Adaptador personalizado
+
+Si necesitas integrar con otro sistema (DynamoDB, Firebase, Prisma, TypeORM, etc.):
+
+```typescript
+import {
+  DatabaseAdapter,
+  User,
+  CreateUserData,
+  Session,
+} from "@camarauth/sdk/server";
+
+class MyCustomAdapter implements DatabaseAdapter {
+  private db: any; // Tu conexión de base de datos
+
+  constructor(connection: any) {
+    this.db = connection;
+  }
+
+  async findUserByPhone(phone: string): Promise<User | null> {
+    // Tu implementación
+    const result = await this.db.query(
+      "SELECT * FROM customers WHERE phone_number = ?",
+      [phone],
+    );
+
+    if (result.length === 0) return null;
+
+    return {
+      id: result[0].customer_id.toString(),
+      name: result[0].first_name,
+      surname: result[0].last_name,
+      phone: result[0].phone_number,
+      email: result[0].email_address,
+      roles: result[0].role ? [result[0].role] : ["user"],
+    };
+  }
+
+  async createUser(userData: CreateUserData): Promise<User> {
+    // Tu implementación
+    const result = await this.db.query(
+      `INSERT INTO customers (first_name, phone_number, status, created_at)
+       VALUES (?, ?, 'active', NOW())`,
+      [userData.name, userData.phone],
+    );
+
+    return {
+      id: result.insertId.toString(),
+      name: userData.name,
+      phone: userData.phone,
+      roles: ["user"],
+    };
+  }
+
+  async updateUser(userId: string, data: Partial<User>): Promise<User> {
+    // Tu implementación
+    await this.db.query(
+      "UPDATE customers SET first_name = ? WHERE customer_id = ?",
+      [data.name, userId],
+    );
+
+    return this.findUserByPhone(data.phone!);
+  }
+
+  async saveSession(userId: string, refreshToken: string): Promise<void> {
+    // Tu implementación
+    await this.db.query(
+      `INSERT INTO user_tokens (user_id, refresh_token, is_active)
+       VALUES (?, ?, true)
+       ON DUPLICATE KEY UPDATE refresh_token = ?, is_active = true`,
+      [userId, refreshToken, refreshToken],
+    );
+  }
+
+  async getSession(userId: string): Promise<Session | null> {
+    // Tu implementación
+    const result = await this.db.query(
+      "SELECT * FROM user_tokens WHERE user_id = ? AND is_active = true",
+      [userId],
+    );
+
+    if (result.length === 0) return null;
+
+    return {
+      userId: result[0].user_id,
+      refreshToken: result[0].refresh_token,
+      isActive: result[0].is_active,
+    };
+  }
+
+  async invalidateSession(userId: string): Promise<void> {
+    // Tu implementación
+    await this.db.query(
+      "UPDATE user_tokens SET is_active = false WHERE user_id = ?",
+      [userId],
+    );
+  }
+
+  // Opcional: para tracking de códigos de verificación
+  async saveVerificationCode?(
+    code: string,
+    data: VerificationData,
+  ): Promise<void> {
+    await this.db.query(
+      "INSERT INTO verification_codes (code, phone, status) VALUES (?, ?, ?)",
+      [code, data.phoneNumber, "pending"],
+    );
+  }
+}
+
+// Uso
+const backend = new CamarauthBackend({
+  // ... otras opciones
+  database: new MyCustomAdapter(myDbConnection),
+});
+```
+
+## Configuración completa
+
+```typescript
+interface DatabaseConfig {
+  // Adaptador de base de datos (requerido)
+  database: DatabaseAdapter;
+
+  // Opcional: Configuración de caché
+  cache?: {
+    adapter: CacheAdapter;
+    ttl: number;
+  };
+
+  // Opcional: Logging de queries
+  logging?: boolean | ((query: string, params: any[]) => void);
+}
+
+// Ejemplo completo
+const backend = new CamarauthBackend({
+  port: 3001,
+  jwtSecret: process.env.JWT_SECRET!,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+
+  database: new PostgreSQLAdapter(pool, {
+    tablePrefix: "auth_",
+    userTable: "users",
+    userIdColumn: "user_id",
+    userNameColumn: "first_name",
+    userPhoneColumn: "phone",
+  }),
+
+  // Opcional: Redis para caché de sesiones
+  cache: {
+    adapter: new RedisCacheAdapter(redisClient),
+    ttl: 3600, // 1 hora
+  },
+
+  // Opcional: Logging
+  logging: (query, params) => {
+    console.log("[DB Query]", query, params);
+  },
+});
+```
+
+## Migraciones
+
+Si necesitas crear las tablas necesarias:
+
+```typescript
+import { PostgreSQLAdapter } from "@camarauth/sdk/server";
+
+const adapter = new PostgreSQLAdapter(pool);
+
+// Ejecutar migraciones
+await adapter.migrate({
+  createTables: true,
+  tablePrefix: "camarauth_",
+});
+```
+
+## Sin base de datos (Modo memoria)
+
+Para desarrollo o despliegues simples:
+
+```typescript
+const backend = new CamarauthBackend({
+  port: 3001,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+  // No pasar 'database' - usa memoria RAM
+});
+```
+
+## Comparación de adaptadores
+
+| Característica          | PostgreSQL  | MongoDB       | Redis          | Custom         |
+| ----------------------- | ----------- | ------------- | -------------- | -------------- |
+| **Persistencia**        | ✅ Completa | ✅ Completa   | ⚠️ Volátil     | ✅ Depende     |
+| **Escalabilidad**       | ✅ Alta     | ✅ Alta       | ✅ Alta        | ✅ Depende     |
+| **Consultas complejas** | ✅ Sí       | ✅ Sí         | ❌ Limitado    | ✅ Depende     |
+| **Transacciones**       | ✅ Sí       | ✅ Sí         | ⚠️ Limitado    | ✅ Depende     |
+| **Ideal para**          | Producción  | JSON flexible | Caché/sesiones | Legacy systems |
+
+## Véase también
+
+- [PostgreSQLAdapter reference](/backend/adapters/postgresql)
+- [MongoDBAdapter reference](/backend/adapters/mongodb)
+- [RedisAdapter reference](/backend/adapters/redis)
+- [Creando adaptadores personalizados](/backend/adapters/custom)

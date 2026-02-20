@@ -1,0 +1,346 @@
+---
+title: "Custom Adapter"
+description: "Crea tu propio adaptador de base de datos"
+---
+
+# Crear Adaptador Personalizado
+
+Si necesitas integrar con DynamoDB, Firebase, Prisma, TypeORM, o cualquier otro sistema, puedes crear tu propio adaptador.
+
+## Interfaz DatabaseAdapter
+
+```typescript
+interface DatabaseAdapter {
+  // Operaciones de usuario
+  findUserByPhone(phone: string): Promise<User | null>;
+  createUser(userData: CreateUserData): Promise<User>;
+  updateUser(userId: string, data: Partial<User>): Promise<User>;
+
+  // Operaciones de sesión
+  saveSession(userId: string, refreshToken: string): Promise<void>;
+  getSession(userId: string): Promise<Session | null>;
+  invalidateSession(userId: string): Promise<void>;
+
+  // Opcional: Operaciones de códigos de verificación
+  saveVerificationCode?(code: string, data: VerificationData): Promise<void>;
+  updateVerificationCode?(
+    code: string,
+    data: Partial<VerificationData>,
+  ): Promise<void>;
+}
+
+interface User {
+  id: string;
+  name: string;
+  surname?: string;
+  phone: string;
+  email?: string;
+  roles: string[];
+  [key: string]: any;
+}
+
+interface CreateUserData {
+  name: string;
+  surname?: string;
+  phone: string;
+}
+
+interface Session {
+  userId: string;
+  refreshToken: string;
+  isActive: boolean;
+}
+
+interface VerificationData {
+  userId?: string;
+  phoneNumber: string;
+  status: "pending" | "verified";
+}
+```
+
+## Ejemplo: Prisma Adapter
+
+```typescript
+import {
+  DatabaseAdapter,
+  User,
+  CreateUserData,
+  Session,
+} from "@camarauth/sdk/server";
+import { PrismaClient } from "@prisma/client";
+
+class PrismaAdapter implements DatabaseAdapter {
+  private prisma: PrismaClient;
+
+  constructor(prisma: PrismaClient) {
+    this.prisma = prisma;
+  }
+
+  async findUserByPhone(phone: string): Promise<User | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { phone },
+    });
+
+    if (!user) return null;
+
+    return {
+      id: user.id,
+      name: user.name,
+      phone: user.phone,
+      email: user.email,
+      roles: user.roles.map((r) => r.name),
+    };
+  }
+
+  async createUser(userData: CreateUserData): Promise<User> {
+    const user = await this.prisma.user.create({
+      data: {
+        name: userData.name,
+        phone: userData.phone,
+      },
+    });
+
+    return {
+      id: user.id,
+      name: user.name,
+      phone: user.phone,
+      roles: ["user"],
+    };
+  }
+
+  async updateUser(userId: string, data: Partial<User>): Promise<User> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        name: data.name,
+        email: data.email,
+      },
+    });
+
+    return {
+      id: user.id,
+      name: user.name,
+      phone: user.phone,
+      roles: user.roles.map((r) => r.name),
+    };
+  }
+
+  async saveSession(userId: string, refreshToken: string): Promise<void> {
+    await this.prisma.session.upsert({
+      where: { userId },
+      update: { refreshToken, isActive: true },
+      create: { userId, refreshToken, isActive: true },
+    });
+  }
+
+  async getSession(userId: string): Promise<Session | null> {
+    const session = await this.prisma.session.findUnique({
+      where: { userId },
+    });
+
+    if (!session) return null;
+
+    return {
+      userId: session.userId,
+      refreshToken: session.refreshToken,
+      isActive: session.isActive,
+    };
+  }
+
+  async invalidateSession(userId: string): Promise<void> {
+    await this.prisma.session.update({
+      where: { userId },
+      data: { isActive: false },
+    });
+  }
+}
+
+// Uso
+const prisma = new PrismaClient();
+
+const backend = new CamarauthBackend({
+  port: 3001,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+  database: new PrismaAdapter(prisma),
+});
+```
+
+## Ejemplo: DynamoDB Adapter
+
+```typescript
+import { DatabaseAdapter } from "@camarauth/sdk/server";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import {
+  DynamoDBDocumentClient,
+  GetCommand,
+  PutCommand,
+  UpdateCommand,
+} from "@aws-sdk/lib-dynamodb";
+
+class DynamoDBAdapter implements DatabaseAdapter {
+  private client: DynamoDBDocumentClient;
+  private usersTable: string;
+  private sessionsTable: string;
+
+  constructor(
+    client: DynamoDBClient,
+    usersTable: string,
+    sessionsTable: string,
+  ) {
+    this.client = DynamoDBDocumentClient.from(client);
+    this.usersTable = usersTable;
+    this.sessionsTable = sessionsTable;
+  }
+
+  async findUserByPhone(phone: string): Promise<User | null> {
+    const result = await this.client.send(
+      new GetCommand({
+        TableName: this.usersTable,
+        Key: { phone },
+      }),
+    );
+
+    if (!result.Item) return null;
+
+    return {
+      id: result.Item.userId,
+      name: result.Item.name,
+      phone: result.Item.phone,
+      roles: result.Item.roles || ["user"],
+    };
+  }
+
+  async createUser(userData: CreateUserData): Promise<User> {
+    const userId = generateUUID();
+
+    await this.client.send(
+      new PutCommand({
+        TableName: this.usersTable,
+        Item: {
+          userId,
+          phone: userData.phone,
+          name: userData.name,
+          roles: ["user"],
+          createdAt: new Date().toISOString(),
+        },
+      }),
+    );
+
+    return {
+      id: userId,
+      name: userData.name,
+      phone: userData.phone,
+      roles: ["user"],
+    };
+  }
+
+  // ... implementar otros métodos
+}
+```
+
+## Ejemplo: Firebase Adapter
+
+```typescript
+import { DatabaseAdapter } from "@camarauth/sdk/server";
+import { Firestore } from "firebase-admin/firestore";
+
+class FirebaseAdapter implements DatabaseAdapter {
+  private db: Firestore;
+
+  constructor(db: Firestore) {
+    this.db = db;
+  }
+
+  async findUserByPhone(phone: string): Promise<User | null> {
+    const snapshot = await this.db
+      .collection("users")
+      .where("phone", "==", phone)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) return null;
+
+    const doc = snapshot.docs[0];
+    const data = doc.data();
+
+    return {
+      id: doc.id,
+      name: data.name,
+      phone: data.phone,
+      roles: data.roles || ["user"],
+    };
+  }
+
+  async createUser(userData: CreateUserData): Promise<User> {
+    const docRef = await this.db.collection("users").add({
+      name: userData.name,
+      phone: userData.phone,
+      roles: ["user"],
+      createdAt: new Date(),
+    });
+
+    return {
+      id: docRef.id,
+      name: userData.name,
+      phone: userData.phone,
+      roles: ["user"],
+    };
+  }
+
+  // ... implementar otros métodos
+}
+```
+
+## Testing tu adaptador
+
+```typescript
+async function testAdapter(adapter: DatabaseAdapter) {
+  console.log("Testing database adapter...\n");
+
+  // Test 1: Create user
+  const user = await adapter.createUser({
+    name: "Test User",
+    phone: "+9999999999",
+  });
+  console.log("✓ User created:", user.id);
+
+  // Test 2: Find by phone
+  const found = await adapter.findUserByPhone("+9999999999");
+  console.log("✓ User found:", found?.name);
+
+  // Test 3: Update user
+  await adapter.updateUser(user.id, { name: "Updated Name" });
+  console.log("✓ User updated");
+
+  // Test 4: Save session
+  await adapter.saveSession(user.id, "test-refresh-token");
+  console.log("✓ Session saved");
+
+  // Test 5: Get session
+  const session = await adapter.getSession(user.id);
+  console.log("✓ Session retrieved:", session?.refreshToken);
+
+  // Test 6: Invalidate session
+  await adapter.invalidateSession(user.id);
+  console.log("✓ Session invalidated");
+
+  console.log("\n✅ All tests passed!");
+}
+```
+
+## Buenas prácticas
+
+1. **Manejo de errores**: Siempre retorna `null` cuando no encuentres datos
+2. **Transacciones**: Usa transacciones cuando sea posible
+3. **Índices**: Crea índices en campos consultados frecuentemente
+4. **Tipos**: Mantén la interfaz `User` consistente
+5. **Tests**: Testea tu adaptador antes de producción
+
+## Véase también
+
+- [DatabaseAdapter interface](/backend/database-adapter)
+- [PostgreSQL Adapter](/backend/adapters/postgresql)
+- [MongoDB Adapter](/backend/adapters/mongodb)
+- [Redis Adapter](/backend/adapters/redis)

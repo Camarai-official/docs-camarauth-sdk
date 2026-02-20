@@ -1,0 +1,74 @@
+---
+title: "Rust SDK"
+description: "Documentación del SDK de Rust para Camarauth"
+---
+
+# Rust SDK
+
+🚧 **En desarrollo**
+
+El SDK de Rust para Camarauth está actualmente en desarrollo.
+
+## Estado del proyecto
+
+- [ ] Estructura base del crate
+- [ ] Servidor con Actix-web o Axum
+- [ ] WebSocket nativo
+- [ ] Integración con Evolution API
+- [ ] JWT con jsonwebtoken
+- [ ] Tests
+- [ ] Documentación
+
+## Características planeadas
+
+- **Máximo rendimiento**: Sin runtime overhead
+- **Type-safe**: Verificación en tiempo de compilación
+- **Async**: Tokio runtime
+- **WebSocket**: Tokio tungstenite o nativo
+- **Webhooks**: Manejo de webhooks Evolution
+- **JWT**: jsonwebtoken crate
+- **Serde**: Serialización/deserialización
+- **WebAssembly**: Soporte para WASM
+
+## Estructura propuesta
+
+```rust
+// Ejemplo de uso futuro
+use camarauth_sdk::{CamarauthBackend, BackendConfig};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let config = BackendConfig {
+        port: 3001,
+        jwt_secret: "tu-secreto".to_string(),
+        evolution_api_url: "https://api.evolution.com".to_string(),
+        evolution_api_key: "tu-api-key".to_string(),
+        evolution_instance_name: "mi-instancia".to_string(),
+    };
+    
+    let backend = CamarauthBackend::new(config)?;
+    backend.start().await?;
+    
+    Ok(())
+}
+```
+
+## Contribuir
+
+¿Quieres ayudar con el desarrollo del SDK de Rust?
+
+1. Revisa nuestro [GitHub](https://github.com/camarauth/camarauth-sdk-rust)
+2. Únete a nuestra comunidad en Discord
+3. Abre un issue o pull request
+
+## Roadmap
+
+- **Alpha**: Q3 2025
+- **Beta**: Q4 2025
+- **Release**: Q4 2025
+
+---
+
+<Note>
+  Suscríbete a nuestras notificaciones para estar al tanto del lanzamiento del SDK de Rust.
+</Note>

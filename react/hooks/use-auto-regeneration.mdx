@@ -1,0 +1,170 @@
+---
+title: "useAutoRegeneration"
+description: "Hook para controlar regeneraciones automáticas"
+---
+
+# useAutoRegeneration
+
+Hook para controlar el número máximo de regeneraciones automáticas de PINs.
+
+## Uso
+
+```typescript
+import { useAutoRegeneration } from '@camarauth/sdk/react';
+
+function AuthComponent() {
+  const { 
+    count, 
+    hasReachedMax, 
+    increment, 
+    reset 
+  } = useAutoRegeneration({
+    maxRegenerations: 3,
+    onMaxReached: () => alert('Máximo de intentos alcanzado'),
+    onRegenerate: (count) => console.log(`Regeneración ${count}`)
+  });
+
+  const handleRegenerate = () => {
+    const success = increment();
+    if (success) {
+      // Generar nuevo PIN
+    }
+  };
+
+  return (
+    <div>
+      <p>Regeneraciones: {count}/3</p>
+      {hasReachedMax && <p>¡Límite alcanzado!</p>}
+      <button onClick={handleRegenerate} disabled={hasReachedMax}>
+        Regenerar
+      </button>
+      <button onClick={reset}>Resetear</button>
+    </div>
+  );
+}
+```
+
+## Parámetros
+
+<ParamField path="options" type="AutoRegenerationOptions">
+  Opciones de configuración
+</ParamField>
+
+### AutoRegenerationOptions
+
+<ParamField path="maxRegenerations" type="number" default="3">
+  Máximo número de regeneraciones permitidas
+</ParamField>
+
+<ParamField path="onMaxReached" type="() => void">
+  Callback cuando se alcanza el máximo
+</ParamField>
+
+<ParamField path="onRegenerate" type="(count: number) => void">
+  Callback en cada regeneración
+</ParamField>
+
+## Valor de retorno
+
+<ResponseField name="count" type="number">
+  Número actual de regeneraciones
+</ResponseField>
+
+<ResponseField name="hasReachedMax" type="boolean">
+  Si se alcanzó el máximo
+</ResponseField>
+
+<ResponseField name="increment" type="() => boolean">
+  Incrementar contador. Retorna false si se alcanzó el máximo.
+</ResponseField>
+
+<ResponseField name="reset" type="() => void">
+  Resetear el contador a cero
+</ResponseField>
+
+## Ejemplo
+
+```tsx
+import { useState } from 'react';
+import { useAutoRegeneration, usePinGenerator } from '@camarauth/sdk/react';
+
+function LimitedAuth() {
+  const [pin, setPin] = useState('');
+  const [emojis, setEmojis] = useState('');
+  
+  const { pin: newPin, emojis: newEmojis, regenerate } = usePinGenerator();
+  
+  const { 
+    count, 
+    hasReachedMax, 
+    increment, 
+    reset 
+  } = useAutoRegeneration({
+    maxRegenerations: 5,
+    onMaxReached: () => {
+      console.warn('Usuario alcanzó máximo de regeneraciones');
+    }
+  });
+
+  const handleGenerate = () => {
+    const result = regenerate();
+    setPin(result.pin);
+    setEmojis(result.emojiString);
+  };
+
+  const handleRegenerate = () => {
+    if (increment()) {
+      const result = regenerate();
+      setPin(result.pin);
+      setEmojis(result.emojiString);
+    }
+  };
+
+  return (
+    <div className="limited-auth">
+      <div className="pin-display">
+        {pin ? (
+          <>
+            <div className="emojis">{emojis}</div>
+            <div className="progress">
+              Regeneraciones: {count}/5
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill" 
+                  style={{ width: `${(count / 5) * 100}%` }}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <button onClick={handleGenerate}>
+            Generar PIN
+          </button>
+        )}
+      </div>
+      
+      <div className="actions">
+        <button 
+          onClick={handleRegenerate}
+          disabled={hasReachedMax}
+        >
+          {hasReachedMax ? 'Límite alcanzado' : 'Regenerar'}
+        </button>
+        
+        <button onClick={() => {
+          reset();
+          setPin('');
+          setEmojis('');
+        }}>
+          Comenzar de nuevo
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+## Véase también
+
+- [usePinAuth](/react/hooks/use-pin-auth)
+- [AutoRegenerationOptions interface](/react/interfaces/auto-regeneration-options)

@@ -1,0 +1,293 @@
+---
+title: "API Reference (Swagger)"
+description: "Documentación interactiva de la API REST"
+---
+
+# API Reference
+
+## Swagger UI
+
+Explora y prueba la API de Camarauth de forma interactiva usando Swagger UI.
+
+<Card
+  title="Ver Swagger UI"
+  icon="document"
+  href="https://petstore.swagger.io/?url=https://raw.githubusercontent.com/camarauth/camarauth-sdk/main/swagger.yaml"
+>
+  Abre el Swagger UI con la especificación completa de la API
+</Card>
+
+## Endpoints principales
+
+### Health Check
+
+```http
+GET /health
+```
+
+Verifica que el servidor está funcionando.
+
+**Respuesta:**
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "activePins": 0,
+  "instance": "mi-instancia"
+}
+```
+
+### Registrar PIN
+
+```http
+POST /register-pin
+Content-Type: application/json
+
+{
+  "pin": "ABC123",
+  "emojiString": "🔐🔑🔒"
+}
+```
+
+Registra un nuevo PIN para autenticación.
+
+**Respuesta:**
+
+```json
+{
+  "success": true,
+  "message": "PIN registrado correctamente",
+  "pinId": "abc123",
+  "expiresIn": 180
+}
+```
+
+### Verificar Login
+
+```http
+POST /check-login
+Content-Type: application/json
+
+{
+  "pin": "ABC123"
+}
+```
+
+Verifica si un PIN ha sido autenticado.
+
+**Respuestas:**
+
+**Pendiente:**
+
+```json
+{
+  "success": true,
+  "verified": false,
+  "message": "Login pendiente"
+}
+```
+
+**Verificado:**
+
+```json
+{
+  "success": true,
+  "verified": true,
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {
+    "id": "123",
+    "name": "Juan",
+    "phone": "+1234567890",
+    "roles": ["user"]
+  }
+}
+```
+
+### Webhook Evolution API
+
+```http
+POST /whatsapp-endpoint
+Content-Type: application/json
+
+{
+  "event": "messages.upsert",
+  "instance": "mi-instancia",
+  "data": {
+    "key": {
+      "remoteJid": "1234567890@s.whatsapp.net",
+      "fromMe": false
+    },
+    "pushName": "Usuario",
+    "message": {
+      "conversation": "PIN: 🔐🔑🔒"
+    }
+  }
+}
+```
+
+Recibe mensajes de WhatsApp desde Evolution API.
+
+**Respuesta:** `200 OK`
+
+### Refrescar Token
+
+```http
+POST /refresh-token
+Authorization: Bearer {access_token}
+
+{
+  "id": "123"
+}
+```
+
+Genera un nuevo token de acceso.
+
+**Respuesta:**
+
+```json
+{
+  "success": true,
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+}
+```
+
+### Obtener Perfil
+
+```http
+GET /profile
+Authorization: Bearer {access_token}
+```
+
+Obtiene los datos del usuario autenticado.
+
+**Respuesta:**
+
+```json
+{
+  "success": true,
+  "user": {
+    "id": "123",
+    "name": "Juan",
+    "surname": "Pérez",
+    "phone": "+1234567890",
+    "roles": ["user"]
+  }
+}
+```
+
+### Logout
+
+```http
+POST /logout
+Authorization: Bearer {access_token}
+
+{
+  "id": "123"
+}
+```
+
+Cierra la sesión del usuario.
+
+**Respuesta:**
+
+```json
+{
+  "success": true,
+  "message": "Logout exitoso"
+}
+```
+
+### Enviar mensaje WhatsApp
+
+```http
+POST /send-message
+Authorization: Bearer {access_token}
+Content-Type: application/json
+
+{
+  "phoneNumber": "+1234567890",
+  "message": "Hola, tu código es ABC123"
+}
+```
+
+Envía un mensaje de WhatsApp manualmente.
+
+**Respuesta:**
+
+```json
+{
+  "success": true,
+  "message": "Mensaje enviado"
+}
+```
+
+## WebSocket Events
+
+### Cliente → Servidor
+
+```javascript
+// Registrar PIN
+socket.emit("register-pin", {
+  pin: "ABC123",
+  emojiString: "🔐🔑🔒",
+});
+
+// Cancelar autenticación
+socket.emit("cancel-auth", {
+  pin: "ABC123",
+});
+```
+
+### Servidor → Cliente
+
+```javascript
+// PIN registrado
+socket.on("pin-registered", (data) => {
+  console.log("PIN registrado:", data.pinId);
+});
+
+// Autenticación exitosa
+socket.on("auth-success", (data) => {
+  console.log("Token:", data.token);
+  console.log("Usuario:", data.user);
+});
+
+// PIN expirado
+socket.on("pin-expired", (data) => {
+  console.log("PIN expirado:", data.pin);
+});
+
+// Error
+socket.on("pin-error", (data) => {
+  console.error("Error:", data.error);
+});
+```
+
+## Códigos de error
+
+| Código                  | HTTP | Descripción            |
+| ----------------------- | ---- | ---------------------- |
+| `PIN_EXPIRED`           | 410  | El PIN ha expirado     |
+| `PIN_NOT_FOUND`         | 404  | PIN no existe          |
+| `AUTHENTICATION_FAILED` | 401  | Autenticación fallida  |
+| `REFRESH_TOKEN_EXPIRED` | 401  | Refresh token expirado |
+| `VALIDATION_ERROR`      | 400  | Datos inválidos        |
+| `NETWORK_ERROR`         | 503  | Error de red           |
+
+## Descargar especificación
+
+- [swagger.yaml](https://github.com/camarauth/camarauth-sdk/blob/main/swagger.yaml)
+- [swagger.json](https://github.com/camarauth/camarauth-sdk/blob/main/swagger.json)
+
+## Postman Collection
+
+<Card
+  title="Importar a Postman"
+  icon="download"
+  href="https://raw.githubusercontent.com/camarauth/camarauth-sdk/main/postman-collection.json"
+>
+  Descarga la colección de Postman lista para usar
+</Card>

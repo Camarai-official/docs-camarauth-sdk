@@ -1,0 +1,202 @@
+---
+title: "Redis Adapter"
+description: "Adaptador de base de datos para Redis (cache y sesiones)"
+---
+
+# RedisAdapter
+
+Adaptador para Redis, ideal para caché de sesiones y alto rendimiento.
+
+<Note>
+  Redis es ideal para sesiones y caché, pero no para persistencia de usuarios a
+  largo plazo. Se recomienda usar un UserProvider externo para la gestión de
+  usuarios.
+</Note>
+
+## Instalación
+
+```bash
+npm install @camarauth/sdk redis
+```
+
+## Uso básico
+
+```typescript
+import { CamarauthBackend, RedisAdapter } from "@camarauth/sdk/server";
+import { createClient } from "redis";
+
+const redis = createClient({
+  url: process.env.REDIS_URL,
+});
+await redis.connect();
+
+const adapter = new RedisAdapter(redis);
+
+const backend = new CamarauthBackend({
+  port: 3001,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+  database: adapter,
+});
+```
+
+## Con UserProvider externo
+
+```typescript
+const adapter = new RedisAdapter(redis, {
+  // Proveedor de usuarios externo (API REST, otro DB, etc.)
+  userProvider: {
+    findByPhone: async (phone) => {
+      // Llamar a tu API de usuarios
+      const response = await fetch(
+        `${process.env.USER_API_URL}/users?phone=${phone}`,
+      );
+      if (!response.ok) return null;
+      return response.json();
+    },
+
+    create: async (userData) => {
+      const response = await fetch(`${process.env.USER_API_URL}/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: userData.name,
+          phone: userData.phone,
+        }),
+      });
+      return response.json();
+    },
+
+    update: async (userId, data) => {
+      const response = await fetch(
+        `${process.env.USER_API_URL}/users/${userId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        },
+      );
+      return response.json();
+    },
+
+    getRoles: async (userId) => {
+      const response = await fetch(
+        `${process.env.USER_API_URL}/users/${userId}/roles`,
+      );
+      return response.json();
+    },
+  },
+
+  keyPrefix: "camarauth:",
+  sessionTTL: 604800, // 7 días
+  pinTTL: 180, // 3 minutos
+});
+```
+
+## Opciones de configuración
+
+```typescript
+interface RedisOptions {
+  // Proveedor de usuarios externo (requerido)
+  userProvider: UserProvider;
+
+  // Prefijo para keys de Redis
+  keyPrefix?: string; // default: 'camarauth:'
+
+  // TTL en segundos
+  sessionTTL?: number; // default: 604800 (7 días)
+  pinTTL?: number; // default: 180 (3 minutos)
+}
+
+interface UserProvider {
+  findByPhone(phone: string): Promise<User | null>;
+  create(userData: CreateUserData): Promise<User>;
+  update(userId: string, data: Partial<User>): Promise<User>;
+  getRoles(userId: string): Promise<string[]>;
+}
+```
+
+## Estructura de datos en Redis
+
+```
+# Usuario por teléfono
+camarauth:user:phone:+1234567890 -> { id, name, phone, ... }
+
+# Usuario por ID
+camarauth:user:id:123 -> { id, name, phone, ... }
+
+# Sesión
+camarauth:session:123 -> { refreshToken, isActive, createdAt }
+
+# PIN temporal (expira en 180 segundos)
+camarauth:pin:ABC123 -> { userId, phone, status, expiresAt }
+```
+
+## Ejemplo completo
+
+```typescript
+import { CamarauthBackend, RedisAdapter } from "@camarauth/sdk/server";
+import { createClient } from "redis";
+
+async function main() {
+  const redis = createClient({ url: process.env.REDIS_URL });
+  await redis.connect();
+
+  const adapter = new RedisAdapter(redis, {
+    userProvider: {
+      findByPhone: async (phone) => {
+        // Implementación personalizada
+        const user = await fetchUserFromAPI(phone);
+        return user;
+      },
+      create: async (userData) => {
+        return createUserInAPI(userData);
+      },
+      update: async (userId, data) => {
+        return updateUserInAPI(userId, data);
+      },
+      getRoles: async (userId) => {
+        return getUserRolesFromAPI(userId);
+      },
+    },
+    keyPrefix: "auth:",
+    sessionTTL: 604800,
+    pinTTL: 180,
+  });
+
+  const backend = new CamarauthBackend({
+    port: 3001,
+    jwtSecret: process.env.JWT_SECRET!,
+    evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+    evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+    evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+    database: adapter,
+  });
+
+  backend.start();
+}
+
+main();
+```
+
+## Ventajas de Redis
+
+- ✅ **Ultra rápido**: Operaciones en memoria
+- ✅ **TTL automático**: Expiración de keys
+- ✅ **Pub/Sub**: Para notificaciones en tiempo real
+- ✅ **Cluster**: Escalabilidad horizontal
+- ✅ **Caché**: Reduce carga en DB principal
+
+## Casos de uso ideales
+
+1. **Microservicios**: Redis como caché compartido
+2. **Alto tráfico**: Sesiones rápidas sin DB
+3. **Temporales**: PINs de corta duración
+4. **Rate limiting**: Control de intentos
+
+## Véase también
+
+- [DatabaseAdapter interface](/backend/database-adapter)
+- [PostgreSQL Adapter](/backend/adapters/postgresql)
+- [MongoDB Adapter](/backend/adapters/mongodb)

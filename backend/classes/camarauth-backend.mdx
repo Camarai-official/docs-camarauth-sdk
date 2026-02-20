@@ -1,0 +1,224 @@
+---
+title: "CamarauthBackend"
+description: "Clase principal para el servidor backend de autenticación"
+---
+
+# CamarauthBackend
+
+La clase `CamarauthBackend` es el núcleo del servidor de autenticación. Gestiona WebSockets, webhooks de WhatsApp, generación de PINs y tokens JWT.
+
+## Constructor
+
+```typescript
+constructor(config: BackendConfig)
+```
+
+### Parámetros
+
+<ParamField path="config" type="BackendConfig" required>
+  Configuración del backend
+</ParamField>
+
+### Ejemplo
+
+```typescript
+import { CamarauthBackend } from '@camarauth/sdk/server';
+
+const backend = new CamarauthBackend({
+  port: 3001,
+  host: '0.0.0.0',
+  jwtSecret: 'tu-secreto-jwt',
+  evolutionApiUrl: 'https://evolution-api.com',
+  evolutionApiKey: 'api-key',
+  evolutionInstanceName: 'mi-instancia',
+  pinExpirationMinutes: 3,
+  corsOrigins: ['http://localhost:5173']
+});
+```
+
+## Métodos
+
+### start()
+
+Inicia el servidor HTTP y WebSocket.
+
+```typescript
+start(): void
+```
+
+```typescript
+backend.start();
+// Servidor iniciado en http://localhost:3001
+```
+
+### stop()
+
+Detiene el servidor gracefully.
+
+```typescript
+stop(): Promise<void>
+```
+
+```typescript
+await backend.stop();
+```
+
+### sendWhatsAppMessage()
+
+Envía un mensaje de WhatsApp manualmente.
+
+```typescript
+sendWhatsAppMessage(options: SendMessageOptions): Promise<void>
+```
+
+#### Parámetros
+
+<ParamField path="options.phoneNumber" type="string" required>
+  Número de teléfono destino
+</ParamField>
+
+<ParamField path="options.message" type="string" required>
+  Mensaje a enviar
+</ParamField>
+
+<ParamField path="options.instanceName" type="string">
+  Nombre de la instancia de Evolution (opcional)
+</ParamField>
+
+#### Ejemplo
+
+```typescript
+await backend.sendWhatsAppMessage({
+  phoneNumber: '+1234567890',
+  message: '¡Hola! Tu PIN es: 🔐🔑'
+});
+```
+
+### getPins()
+
+Obtiene el Map de PINs activos (útil para debugging).
+
+```typescript
+getPins(): Map<string, PinData>
+```
+
+### getApp()
+
+Obtiene la instancia de Express (para agregar rutas personalizadas).
+
+```typescript
+getApp(): express.Application
+```
+
+```typescript
+const app = backend.getApp();
+
+app.get('/custom-route', (req, res) => {
+  res.json({ message: 'Ruta personalizada' });
+});
+```
+
+### getIO()
+
+Obtiene la instancia de Socket.IO.
+
+```typescript
+getIO(): Server
+```
+
+## Eventos
+
+El backend emite eventos que puedes escuchar:
+
+### auth:verified
+
+Emitido cuando un PIN es verificado exitosamente.
+
+```typescript
+backend.on('auth:verified', (data) => {
+  console.log('Usuario verificado:', data.userId);
+  console.log('Teléfono:', data.phoneNumber);
+  console.log('PIN:', data.pin);
+});
+```
+
+## Endpoints HTTP
+
+El backend expone los siguientes endpoints:
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/health` | Health check |
+| POST | `/register-pin` | Registrar nuevo PIN |
+| POST | `/check-login` | Verificar estado de login |
+| POST | `/whatsapp-endpoint` | Webhook para Evolution API |
+| POST | `/webhook/evolution` | Alias del webhook |
+| POST | `/refresh-token` | Refrescar token JWT |
+| GET | `/profile` | Obtener perfil del usuario |
+| POST | `/logout` | Cerrar sesión |
+| POST | `/send-message` | Enviar mensaje WhatsApp |
+
+## WebSocket Events
+
+### Cliente → Servidor
+
+- `register-pin` - Registrar un PIN
+- `cancel-auth` - Cancelar autenticación
+
+### Servidor → Cliente
+
+- `pin-registered` - PIN registrado exitosamente
+- `auth-success` - Autenticación exitosa
+- `pin-expired` - PIN expirado
+- `pin-error` - Error en el PIN
+
+## Ejemplo completo
+
+```typescript
+import { CamarauthBackend, PostgreSQLAdapter } from '@camarauth/sdk/server';
+import { Pool } from 'pg';
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
+
+const backend = new CamarauthBackend({
+  port: parseInt(process.env.PORT || '3001'),
+  host: process.env.HOST || '0.0.0.0',
+  jwtSecret: process.env.JWT_SECRET!,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+  pinExpirationMinutes: 3,
+  corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:5173'],
+  database: new PostgreSQLAdapter(pool)
+});
+
+// Escuchar eventos
+backend.on('auth:verified', async (data) => {
+  // Enviar mensaje de bienvenida
+  await backend.sendWhatsAppMessage({
+    phoneNumber: data.phoneNumber,
+    message: `¡Bienvenido! Tu sesión ha sido verificada. 🔐`
+  });
+});
+
+// Iniciar servidor
+backend.start();
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('Cerrando servidor...');
+  await backend.stop();
+  process.exit(0);
+});
+```
+
+## Véase también
+
+- [BackendConfig interface](/backend/interfaces/backend-config)
+- [PinData interface](/backend/interfaces/pin-data)
+- [DatabaseAdapter interface](/backend/database-adapter)
+- [PostgreSQL Adapter](/backend/adapters/postgresql)
+- [MongoDB Adapter](/backend/adapters/mongodb)
+- [CamarauthClient class](/backend/classes/camarauth-client)

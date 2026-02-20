@@ -1,0 +1,193 @@
+---
+title: "Pin Generator"
+description: "Generación de PINs seguros"
+---
+
+# Pin Generator
+
+Utilidades para generar PINs aleatorios seguros.
+
+## generatePin
+
+Genera un PIN aleatorio de caracteres alfanuméricos.
+
+```typescript
+function generatePin(options?: PinGeneratorOptions): string
+```
+
+### Parámetros
+
+| Opción | Tipo | Default | Descripción |
+|--------|------|---------|-------------|
+| `length` | number | 6 | Longitud del PIN |
+| `characters` | string | A-Z, 0-9 | Caracteres permitidos |
+
+### Ejemplos
+
+```typescript
+import { generatePin } from '@camarauth/sdk';
+
+// PIN por defecto (6 caracteres)
+const pin1 = generatePin();
+console.log(pin1); // "ABC123"
+
+// PIN de 8 caracteres
+const pin2 = generatePin({ length: 8 });
+console.log(pin2); // "AB12CD34"
+
+// Solo números
+const pin3 = generatePin({ 
+  length: 4, 
+  characters: '0123456789' 
+});
+console.log(pin3); // "7392"
+
+// Solo letras mayúsculas
+const pin4 = generatePin({
+  characters: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+});
+console.log(pin4); // "XKQMNP"
+```
+
+## encodePinToEmojis
+
+Codifica un PIN en emojis.
+
+```typescript
+function encodePinToEmojis(
+  pin: string, 
+  options?: EmojiEncoderOptions
+): string[]
+```
+
+### Parámetros
+
+| Opción | Tipo | Default | Descripción |
+|--------|------|---------|-------------|
+| `emojis` | string[] | Emoji aleatorio | Emojis base a usar |
+
+### Ejemplos
+
+```typescript
+import { encodePinToEmojis } from '@camarauth/sdk';
+
+// Usar emojis por defecto
+const emojis1 = encodePinToEmojis('ABC');
+console.log(emojis1); // ["🔐", "🔑", "🔒"]
+
+// Emojis personalizados
+const emojis2 = encodePinToEmojis('123', {
+  emojis: ['😀', '😎', '🤔']
+});
+console.log(emojis2); // ["😀", "😎", "🤔"]
+```
+
+## generatePinWithEmojis
+
+Genera PIN y lo codifica en emojis (todo en uno).
+
+```typescript
+function generatePinWithEmojis(
+  options?: PinGeneratorOptions
+): PinGenerationResult
+```
+
+### Retorna
+
+```typescript
+interface PinGenerationResult {
+  pin: string;           // PIN original (ej: "ABC123")
+  emojis: string[];      // Array de emojis
+  emojiString: string;   // Emojis concatenados
+}
+```
+
+### Ejemplos
+
+```typescript
+import { generatePinWithEmojis } from '@camarauth/sdk';
+
+// Generación completa
+const result = generatePinWithEmojis();
+console.log(result.pin);          // "ABC123"
+console.log(result.emojis);       // ["🔐", "🔑", "🔒", "🔓", "🗝️", "🛡️"]
+console.log(result.emojiString);  // "🔐🔑🔒🔓🗝️🛡️"
+
+// Personalizado
+const custom = generatePinWithEmojis({
+  length: 4,
+  characters: '0123456789'
+});
+console.log(custom.pin); // "7392"
+```
+
+## formatTime
+
+Formatea segundos a formato MM:SS.
+
+```typescript
+function formatTime(seconds: number): string
+```
+
+### Ejemplos
+
+```typescript
+import { formatTime } from '@camarauth/sdk';
+
+console.log(formatTime(175));  // "02:55"
+console.log(formatTime(60));   // "01:00"
+console.log(formatTime(5));    // "00:05"
+console.log(formatTime(0));    // "00:00"
+```
+
+## Seguridad
+
+Los PINs se generan usando:
+
+- ✅ `crypto.getRandomValues()` en navegador (CSPRNG)
+- ✅ `Math.random()` con fallback en Node.js
+- ✅ Distribución uniforme de caracteres
+- ✅ Sin patrones predecibles
+
+## Casos de uso
+
+### Código de verificación
+
+```typescript
+import { generatePin } from '@camarauth/sdk';
+
+function createVerificationCode(): string {
+  return generatePin({ length: 6 });
+}
+
+const code = createVerificationCode();
+```
+
+### Token temporal
+
+```typescript
+import { generatePinWithEmojis } from '@camarauth/sdk';
+
+function createTempToken() {
+  return generatePinWithEmojis({
+    length: 8,
+    characters: 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // Sin I, O, 0, 1
+  });
+}
+```
+
+### Código de acceso
+
+```typescript
+import { generatePin } from '@camarauth/sdk';
+
+function createAccessCode(userId: string): string {
+  const pin = generatePin({ length: 4 });
+  return `${userId}-${pin}`;
+}
+```
+
+## Véase también
+
+- [Emoji Encoder](/core/emoji-encoder)
+- [Core Overview](/core/overview)

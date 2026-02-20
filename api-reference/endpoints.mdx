@@ -1,0 +1,221 @@
+---
+title: "Endpoints REST"
+description: "Documentación de endpoints HTTP"
+---
+
+# Endpoints REST
+
+Referencia completa de los endpoints HTTP disponibles en el backend.
+
+## Health Check
+
+```http
+GET /health
+```
+
+Verifica que el servidor está funcionando correctamente.
+
+**Respuesta (200):**
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "activePins": 5,
+  "instance": "mi-instancia"
+}
+```
+
+## Autenticación
+
+### Registrar PIN
+
+```http
+POST /register-pin
+Content-Type: application/json
+
+{
+  "pin": "ABC123",
+  "emojiString": "🔐🔑🔒"
+}
+```
+
+Registra un nuevo PIN para autenticación.
+
+**Respuesta (200):**
+```json
+{
+  "success": true,
+  "message": "PIN registrado correctamente",
+  "pinId": "abc123",
+  "expiresIn": 180
+}
+```
+
+### Verificar Login
+
+```http
+POST /check-login
+Content-Type: application/json
+
+{
+  "pin": "ABC123"
+}
+```
+
+Verifica si un PIN ha sido autenticado.
+
+**Respuesta (200) - Pendiente:**
+```json
+{
+  "success": true,
+  "verified": false,
+  "message": "Login pendiente"
+}
+```
+
+**Respuesta (200) - Verificado:**
+```json
+{
+  "success": true,
+  "verified": true,
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {
+    "id": "123",
+    "name": "Juan",
+    "phone": "+1234567890",
+    "roles": ["user"]
+  }
+}
+```
+
+### Refrescar Token
+
+```http
+POST /refresh-token
+Authorization: Bearer {access_token}
+Content-Type: application/json
+
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+}
+```
+
+Genera un nuevo token de acceso.
+
+**Respuesta (200):**
+```json
+{
+  "success": true,
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+}
+```
+
+## Webhooks
+
+### Webhook Evolution API
+
+```http
+POST /whatsapp-endpoint
+Content-Type: application/json
+X-Hub-Signature-256: sha256={signature}
+
+{
+  "event": "messages.upsert",
+  "instance": "mi-instancia",
+  "data": {
+    "key": {
+      "remoteJid": "1234567890@s.whatsapp.net",
+      "fromMe": false
+    },
+    "message": {
+      "conversation": "PIN: 🔐🔑🔒"
+    }
+  }
+}
+```
+
+Recibe mensajes de WhatsApp desde Evolution API.
+
+**Respuesta:** `200 OK`
+
+## Perfil y Sesión
+
+### Obtener Perfil
+
+```http
+GET /profile
+Authorization: Bearer {access_token}
+```
+
+Obtiene los datos del usuario autenticado.
+
+**Respuesta (200):**
+```json
+{
+  "success": true,
+  "user": {
+    "id": "123",
+    "name": "Juan",
+    "surname": "Pérez",
+    "phone": "+1234567890",
+    "roles": ["user"]
+  }
+}
+```
+
+### Cerrar Sesión
+
+```http
+POST /logout
+Authorization: Bearer {access_token}
+Content-Type: application/json
+
+{
+  "userId": "123"
+}
+```
+
+Cierra la sesión del usuario.
+
+**Respuesta (200):**
+```json
+{
+  "success": true,
+  "message": "Logout exitoso"
+}
+```
+
+### Enviar Mensaje WhatsApp
+
+```http
+POST /send-message
+Authorization: Bearer {access_token}
+Content-Type: application/json
+
+{
+  "phoneNumber": "+1234567890",
+  "message": "Hola, tu código es ABC123"
+}
+```
+
+Envía un mensaje de WhatsApp manualmente.
+
+**Respuesta (200):**
+```json
+{
+  "success": true,
+  "message": "Mensaje enviado"
+}
+```
+
+## Autenticación
+
+Todos los endpoints protegidos requieren un token JWT en el header:
+
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+```
+
+Para obtener un token, usa el flujo de autenticación con PIN.

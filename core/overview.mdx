@@ -1,0 +1,207 @@
+---
+title: "Core"
+description: "Utilidades core del SDK de Camarauth"
+---
+
+# Core
+
+El paquete `@camarauth/sdk` incluye utilidades core que puedes usar independientemente del framework.
+
+## Funciones disponibles
+
+### Generación de PINs
+
+```typescript
+import {
+  generatePin,
+  encodePinToEmojis,
+  generatePinWithEmojis,
+} from "@camarauth/sdk";
+
+// Generar PIN simple
+const pin = generatePin({ length: 6 });
+console.log(pin); // "ABC123"
+
+// Codificar en emojis
+const emojis = encodePinToEmojis(pin);
+console.log(emojis); // ["🔐", "🔑", "🔒", "🔓", "🗝️", "🛡️"]
+
+// Todo en uno
+const result = generatePinWithEmojis();
+console.log(result.pin); // "ABC123"
+console.log(result.emojis); // ["🔐", "🔑", "🔒", ...]
+console.log(result.emojiString); // "🔐🔑🔒..."
+```
+
+### Codificación de emojis
+
+```typescript
+import {
+  encodeTextToEmojis,
+  decodeEmojiChunk,
+  decodeEmojisFull,
+} from "@camarauth/sdk";
+
+// Codificar texto
+const encoded = encodeTextToEmojis("😀", "A");
+console.log(encoded); // "😀󠄀" (emoji con variante)
+
+// Decodificar
+const decoded = decodeEmojiChunk("😀󠄀");
+console.log(decoded); // "A"
+
+// Decodificar string completo
+const fullDecoded = decodeEmojisFull("😀󠄀😎󠄁");
+console.log(fullDecoded); // "AB"
+```
+
+### Utilidades de tiempo
+
+```typescript
+import { formatTime } from "@camarauth/sdk";
+
+// Formatear segundos a MM:SS
+const formatted = formatTime(175);
+console.log(formatted); // "02:55"
+
+const formatted2 = formatTime(60);
+console.log(formatted2); // "01:00"
+```
+
+### Links de WhatsApp
+
+```typescript
+import {
+  generateWhatsAppLink,
+  generateQRCodeUrl,
+  generateAuthLink,
+} from "@camarauth/sdk";
+
+// Generar link de WhatsApp
+const link = generateWhatsAppLink({
+  phoneNumber: "+1234567890",
+  message: "Hola, mi código es 🔐🔑",
+});
+
+// Generar QR
+const qrUrl = generateQRCodeUrl(link);
+
+// Todo en uno (más usado)
+const auth = generateAuthLink("+1234567890", "🔐🔑🔒🔓", { includeQR: true });
+console.log(auth.whatsappLink); // Link de WA
+console.log(auth.qrCodeUrl); // URL del QR
+console.log(auth.fullMessage); // Mensaje completo
+```
+
+### Utilidades JWT
+
+```typescript
+import { decodeToken, isTokenExpired, getUserFromToken } from "@camarauth/sdk";
+
+// Decodificar token
+const payload = decodeToken(token);
+console.log(payload.sub); // user ID
+
+// Verificar expiración
+if (isTokenExpired(token)) {
+  // Refrescar token
+}
+
+// Obtener usuario
+const user = getUserFromToken(token);
+console.log(user.name);
+```
+
+### Storage
+
+```typescript
+import { createAuthStorage } from "@camarauth/sdk";
+
+const storage = createAuthStorage({
+  storage: localStorage,
+  key: "camarauth",
+});
+
+// Guardar
+await storage.save({
+  token: "jwt-token",
+  user: { id: "123", name: "Juan" },
+});
+
+// Recuperar
+const data = await storage.load();
+
+// Limpiar
+await storage.clear();
+```
+
+## Clases de error
+
+```typescript
+import {
+  CamarauthError,
+  PinExpiredError,
+  AuthenticationError,
+  NetworkError,
+  ValidationError,
+} from "@camarauth/sdk";
+
+try {
+  // ... código
+} catch (error) {
+  if (error instanceof PinExpiredError) {
+    console.log("PIN expirado");
+  } else if (error instanceof AuthenticationError) {
+    console.log("Autenticación fallida");
+  }
+}
+```
+
+## Uso en Node.js
+
+Todas estas utilidades funcionan en Node.js:
+
+```typescript
+// server.ts
+import { generatePin, encodePinToEmojis } from "@camarauth/sdk";
+
+function createAuthCode() {
+  const result = generatePinWithEmojis({ length: 6 });
+  return {
+    code: result.pin,
+    display: result.emojiString,
+  };
+}
+```
+
+## Uso en navegador
+
+También funcionan en el navegador:
+
+```typescript
+// client.ts
+import { generateWhatsAppLink } from "@camarauth/sdk";
+
+const link = generateWhatsAppLink({
+  phoneNumber: "+1234567890",
+  message: "Mi código: 🔐🔑",
+});
+
+window.open(link, "_blank");
+```
+
+## Instalación standalone
+
+Si solo necesitas las utilidades core (sin React o Node.js server):
+
+```bash
+npm install @camarauth/sdk
+```
+
+Y usa solo las importaciones que necesites.
+
+## Véase también
+
+- [Pin Generator](/core/pin-generator)
+- [Emoji Encoder](/core/emoji-encoder)
+- [Errors](/core/errors)

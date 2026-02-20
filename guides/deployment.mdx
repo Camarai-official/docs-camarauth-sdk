@@ -1,0 +1,406 @@
+---
+title: "Despliegue"
+description: "Guía de despliegue para producción"
+---
+
+# Guía de Despliegue
+
+Todo lo que necesitas saber para desplegar Camarauth SDK en producción de forma segura y escalable.
+
+## Preparación
+
+### Checklist Pre-Deploy
+
+<Check>
+- [ ] JWT_SECRET configurado y seguro (mínimo 32 caracteres)
+- [ ] Base de datos PostgreSQL configurada
+- [ ] Evolution API funcionando y accesible
+- [ ] Variables de entorno configuradas
+- [ ] CORS configurado con orígenes específicos
+- [ ] SSL/TLS habilitado
+- [ ] Rate limiting activado
+- [ ] Logs configurados
+- [ ] Monitoreo implementado
+</Check>
+
+### Variables de Entorno
+
+```bash
+# .env.production
+# Servidor
+PORT=3001
+HOST=0.0.0.0
+NODE_ENV=production
+JWT_SECRET=tu-clave-secreta-muy-larga-y-aleatoria-minimo-32-chars
+
+# Evolution API
+EVOLUTION_API_URL=https://api.evolution.com
+EVOLUTION_API_KEY=sk_live_xxxxxxxxxx
+EVOLUTION_INSTANCE_NAME=produccion
+EVOLUTION_WEBHOOK_SECRET=webhook-secret-seguro
+
+# Base de datos
+DATABASE_URL=postgresql://user:password@db.host.com:5432/camarauth
+
+# Seguridad
+CORS_ORIGINS=https://miapp.com,https://www.miapp.com
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_MAX_REQUESTS=100
+
+# Monitoreo
+SENTRY_DSN=https://xxx@yyy.ingest.sentry.io/zzz
+LOG_LEVEL=info
+```
+
+## Opciones de Despliegue
+
+### 1. VPS (DigitalOcean, Linode, AWS EC2)
+
+<Steps>
+  <Step title="Instalar Node.js">
+    ```bash
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+    ```
+  </Step>
+  
+  <Step title="Clonar repositorio">
+    ```bash
+    git clone https://github.com/tu-org/tu-repo.git
+    cd tu-repo
+    npm install
+    npm run build
+    ```
+  </Step>
+  
+  <Step title="Configurar PM2">
+    ```bash
+    sudo npm install -g pm2
+    pm2 start dist/index.js --name camarauth-api
+    pm2 startup
+    pm2 save
+    ```
+  </Step>
+  
+  <Step title="Configurar Nginx">
+    ```nginx
+    server {
+      listen 80;
+      server_name api.tudominio.com;
+      
+      location / {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+      }
+    }
+    ```
+  </Step>
+</Steps>
+
+### 2. Docker
+
+```dockerfile
+# Dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+RUN npm run build
+
+EXPOSE 3001
+
+USER node
+
+CMD ["node", "dist/index.js"]
+```
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/camarauth
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=camarauth
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+```
+
+### 3. Railway/Render/Fly.io
+
+<CodeGroup>
+
+```yaml railway.yml
+build:
+  builder: DOCKERFILE
+  dockerfilePath: ./Dockerfile
+
+deploy:
+  startCommand: node dist/index.js
+  healthcheckPath: /health
+  healthcheckTimeout: 100
+  restartPolicyType: ON_FAILURE
+  restartPolicyMaxRetries: 3
+```
+
+```yaml render.yaml
+services:
+  - type: web
+    name: camarauth-api
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: node dist/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: camarauth-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+
+databases:
+  - name: camarauth-db
+    databaseName: camarauth
+    user: camarauth
+```
+
+</CodeGroup>
+
+## SSL/TLS
+
+### Certbot (Let's Encrypt)
+
+```bash
+# Instalar Certbot
+sudo apt-get install certbot python3-certbot-nginx
+
+# Obtener certificado
+sudo certbot --nginx -d api.tudominio.com
+
+# Auto-renovación
+sudo certbot renew --dry-run
+```
+
+### Configuración HTTPS
+
+```typescript
+// Usar HTTPS en producción
+import https from 'https';
+import fs from 'fs';
+
+if (process.env.NODE_ENV === 'production') {
+  const options = {
+    key: fs.readFileSync('/etc/letsencrypt/live/api.tudominio.com/privkey.pem'),
+    cert: fs.readFileSync('/etc/letsencrypt/live/api.tudominio.com/fullchain.pem')
+  };
+  
+  https.createServer(options, app).listen(443);
+}
+```
+
+## Base de Datos
+
+### PostgreSQL en Producción
+
+```sql
+-- Crear usuario y base de datos
+CREATE USER camarauth WITH PASSWORD 'password-seguro';
+CREATE DATABASE camarauth OWNER camarauth;
+
+-- Configurar conexiones
+ALTER SYSTEM SET max_connections = '200';
+ALTER SYSTEM SET shared_buffers = '256MB';
+```
+
+### Migraciones
+
+```bash
+# Usando tu herramienta favorita
+npx prisma migrate deploy
+# o
+npx typeorm migration:run
+```
+
+## Monitoreo
+
+### Health Checks
+
+```typescript
+// Endpoint de health check (ya incluido)
+app.get('/health', async (req, res) => {
+  const checks = {
+    database: await checkDatabase(),
+    evolution: await checkEvolutionAPI(),
+    timestamp: new Date().toISOString()
+  };
+  
+  const isHealthy = Object.values(checks).every(c => c.status === 'ok');
+  
+  res.status(isHealthy ? 200 : 503).json(checks);
+});
+```
+
+### Logging
+
+```typescript
+// Logger estructurado en producción
+import { createProductionLogger } from 'camarauth-sdk/backend';
+
+const logger = createProductionLogger();
+
+// Uso
+logger.info('PIN registrado', {
+  pinId: pin.id,
+  userId: user.id,
+  timestamp: new Date().toISOString()
+});
+```
+
+### Sentry
+
+```typescript
+import * as Sentry from '@sentry/node';
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV,
+  tracesSampleRate: 0.1
+});
+
+// Capturar errores
+app.use(Sentry.Handlers.errorHandler());
+```
+
+## Escalado
+
+### Horizontal Scaling
+
+<Warning>
+Para escalar horizontalmente (múltiples instancias), necesitas:
+</Warning>
+
+1. **Redis para sesiones**: Compartir estado entre instancias
+2. **Load balancer**: Distribuir tráfico
+3. **Base de datos compartida**: Todas las instancias usan la misma DB
+4. **Sticky sessions**: Mantener conexiones WebSocket
+
+```typescript
+// Configuración con Redis
+import Redis from 'ioredis';
+import { createAdapter } from '@socket.io/redis-adapter';
+
+const pubClient = new Redis(process.env.REDIS_URL);
+const subClient = pubClient.duplicate();
+
+io.adapter(createAdapter(pubClient, subClient));
+```
+
+## Seguridad
+
+### Firewall
+
+```bash
+# UFW (Ubuntu)
+sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+```
+
+### Headers de Seguridad
+
+```typescript
+import helmet from 'helmet';
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: ["'self'", "wss:", "https:"]
+    }
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
+}));
+```
+
+## Troubleshooting
+
+### Problemas Comunes
+
+<AccordionGroup>
+  
+<Accordion title="WebSocket no conecta">
+- Verificar firewall (puerto 3001 abierto)
+- Verificar CORS
+- Verificar SSL/TLS
+- Revisar logs del servidor
+</Accordion>
+
+<Accordion title="Base de datos no conecta">
+- Verificar DATABASE_URL
+- Verificar credenciales
+- Verificar que PostgreSQL esté corriendo
+- Verificar network/security groups
+</Accordion>
+
+<Accordion title="Evolution API no responde">
+- Verificar EVOLUTION_API_URL
+- Verificar EVOLUTION_API_KEY
+- Verificar que la instancia esté conectada
+- Probar webhook manualmente
+</Accordion>
+
+</AccordionGroup>
+
+## Checklist Post-Deploy
+
+- [ ] Health check responde 200
+- [ ] WebSocket conecta correctamente
+- [ ] Base de datos responde
+- [ ] Evolution API responde
+- [ ] SSL/TLS funcionando
+- [ ] Logs aparecen correctamente
+- [ ] Rate limiting activo
+- [ ] CORS configurado correctamente
+- [ ] Variables de entorno cargadas
+- [ ] Monitoreo funcionando
+
+## Referencias
+
+- [PM2 Documentation](https://pm2.keymetrics.io/)
+- [Docker Documentation](https://docs.docker.com/)
+- [Let's Encrypt](https://letsencrypt.org/)
+- [PostgreSQL Tuning](https://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server)

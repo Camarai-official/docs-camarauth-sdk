@@ -1,0 +1,583 @@
+---
+title: "Guía de Testing"
+description: "Cómo testear aplicaciones que usan Camarauth SDK"
+---
+
+# Guía de Testing
+
+Aprende a escribir tests efectivos para tu aplicación con Camarauth SDK. Esta guía cubre desde tests unitarios básicos hasta tests end-to-end completos.
+
+## Setup Inicial
+
+### Configuración de Vitest
+
+```typescript
+// vitest.config.ts
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    environment: 'node', // o 'jsdom' para frontend
+    globals: true,
+    setupFiles: ['./test/setup.ts']
+  }
+});
+```
+
+### Archivo de Setup
+
+```typescript
+// test/setup.ts
+import { cleanup } from '@testing-library/react';
+import { afterEach, vi } from 'vitest';
+
+// Limpiar después de cada test
+afterEach(() => {
+  cleanup();
+});
+
+// Mock de localStorage
+global.localStorage = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn()
+};
+```
+
+## Testing del Backend
+
+### Mock del SDK
+
+```typescript
+// test/mocks/backend.ts
+import { vi } from 'vitest';
+import { MockDatabaseAdapter, FakeTimeProvider } from 'camarauth-sdk/backend';
+
+export const createMockBackend = () => {
+  const mockDb = new MockDatabaseAdapter();
+  const fakeTime = new FakeTimeProvider();
+  
+  return {
+    mockDb,
+    fakeTime,
+    mockPin: (pin: string, data: any) => {
+      mockDb.mockQueryResponse(
+        new RegExp(`SELECT.*${pin}`),
+        [data]
+      );
+    }
+  };
+};
+```
+
+### Test de Registro de PIN
+
+```typescript
+// test/backend/register-pin.test.ts
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { CamarauthBackend, MockDatabaseAdapter, FakeTimeProvider } from 'camarauth-sdk/backend';
+
+describe('POST /register-pin', () => {
+  let backend: CamarauthBackend;
+  let mockDb: MockDatabaseAdapter;
+  let fakeTime: FakeTimeProvider;
+  const PORT = 3002;
+
+  beforeAll(async () => {
+    mockDb = new MockDatabaseAdapter();
+    fakeTime = new FakeTimeProvider();
+    
+    backend = new CamarauthBackend({
+      port: PORT,
+      host: '0.0.0.0',
+      jwtSecret: 'test-secret',
+      evolutionApiUrl: 'http://localhost:8080',
+      evolutionApiKey: 'test-key',
+      evolutionInstanceName: 'test',
+      db: mockDb,
+      timeProvider: fakeTime
+    });
+    
+    backend.start();
+    await new Promise(r => setTimeout(r, 500));
+  });
+
+  afterAll(async () => {
+    await backend.stop();
+  });
+
+  it('registra un PIN correctamente', async () => {
+    mockDb.mockQueryResponse(/INSERT.*pins/, { rowCount: 1 });
+
+    const response = await fetch(`http://localhost:${PORT}/register-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        pin: 'TEST01',
+        emojiString: '🎉🔥✨'
+      })
+    });
+
+    const data = await response.json();
+    
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.pinId).toBeDefined();
+    expect(data.expiresIn).toBe(180);
+  });
+
+  it('rechaza PIN vacío', async () => {
+    const response = await fetch(`http://localhost:${PORT}/register-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        pin: '',
+        emojiString: '🎉🔥✨'
+      })
+    });
+
+    expect(response.status).toBe(400);
+  });
+});
+```
+
+### Test de Expiración con FakeTime
+
+```typescript
+// test/backend/pin-expiration.test.ts
+import { describe, it, expect } from 'vitest';
+
+describe('Expiración de PINs', () => {
+  it('PIN expira después de 3 minutos', async () => {
+    // Crear PIN
+    mockDb.mockQueryResponse(/INSERT.*pins/, { rowCount: 1 });
+    
+    await fetch(`http://localhost:${PORT}/register-pin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: 'EXPIRE' })
+    });
+
+    // PIN existe antes de expirar
+    mockDb.mockQueryResponse(/SELECT.*EXPIRE/, [{
+      id: '123',
+      pin: 'EXPIRE',
+      status: 'pending',
+      expires_at: Date.now() + 180000
+    }]);
+
+    let response = await fetch(`http://localhost:${PORT}/check-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: 'EXPIRE' })
+    });
+    
+    expect(response.status).toBe(200);
+
+    // Avanzar 4 minutos
+    fakeTime.advance(4 * 60 * 1000);
+    
+    // PIN ya no existe (expiró)
+    mockDb.mockQueryResponse(/SELECT.*EXPIRE/, []);
+
+    response = await fetch(`http://localhost:${PORT}/check-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: 'EXPIRE' })
+    });
+    
+    expect(response.status).toBe(404);
+  });
+});
+```
+
+## Testing del Frontend
+
+### Mock de Hooks
+
+```typescript
+// test/mocks/camarauth-sdk.ts
+import { vi } from 'vitest';
+
+export const mockUsePinAuth = vi.fn();
+export const mockUseAuthContext = vi.fn();
+
+vi.mock('camarauth-sdk/react', () => ({
+  usePinAuth: () => mockUsePinAuth(),
+  useAuthContext: () => mockUseAuthContext(),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children
+}));
+```
+
+### Test de Componente de Login
+
+```tsx
+// test/components/Login.test.tsx
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { LoginPage } from '../../src/components/LoginPage';
+import { mockUsePinAuth } from '../mocks/camarauth-sdk';
+
+describe('LoginPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('muestra botón de generar PIN en estado idle', () => {
+    mockUsePinAuth.mockReturnValue({
+      pin: null,
+      emojis: [],
+      status: 'idle',
+      isLoading: false,
+      user: null,
+      generate: vi.fn(),
+      cancel: vi.fn()
+    });
+
+    render(<LoginPage />);
+
+    expect(screen.getByText('Generar PIN')).toBeInTheDocument();
+  });
+
+  it('muestra PIN cuando está en estado polling', () => {
+    mockUsePinAuth.mockReturnValue({
+      pin: 'ABC123',
+      emojis: ['🎉', '🔥', '✨'],
+      status: 'polling',
+      formattedTime: '02:59',
+      isLoading: false,
+      user: null,
+      generate: vi.fn(),
+      cancel: vi.fn()
+    });
+
+    render(<LoginPage />);
+
+    expect(screen.getByText('ABC123')).toBeInTheDocument();
+    expect(screen.getByText('🎉 🔥 ✨')).toBeInTheDocument();
+    expect(screen.getByText('Expira en: 02:59')).toBeInTheDocument();
+  });
+
+  it('llama a generate al hacer click', () => {
+    const mockGenerate = vi.fn();
+    
+    mockUsePinAuth.mockReturnValue({
+      pin: null,
+      emojis: [],
+      status: 'idle',
+      isLoading: false,
+      user: null,
+      generate: mockGenerate,
+      cancel: vi.fn()
+    });
+
+    render(<LoginPage />);
+    
+    fireEvent.click(screen.getByText('Generar PIN'));
+    
+    expect(mockGenerate).toHaveBeenCalled();
+  });
+
+  it('muestra usuario autenticado', () => {
+    mockUsePinAuth.mockReturnValue({
+      pin: null,
+      emojis: [],
+      status: 'success',
+      isLoading: false,
+      user: {
+        id: '123',
+        name: 'Juan Pérez',
+        email: 'juan@example.com'
+      },
+      generate: vi.fn(),
+      cancel: vi.fn()
+    });
+
+    render(<LoginPage />);
+
+    expect(screen.getByText('¡Bienvenido, Juan Pérez!')).toBeInTheDocument();
+  });
+});
+```
+
+### Test de Hooks
+
+```typescript
+// test/hooks/useCustomAuth.test.ts
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { useCustomAuth } from '../../src/hooks/useCustomAuth';
+import { mockUsePinAuth } from '../mocks/camarauth-sdk';
+
+describe('useCustomAuth', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('inicializa correctamente', () => {
+    mockUsePinAuth.mockReturnValue({
+      status: 'idle',
+      user: null,
+      generate: vi.fn()
+    });
+
+    const { result } = renderHook(() => useCustomAuth());
+
+    expect(result.current.isReady).toBe(true);
+    expect(result.current.attempts).toBe(0);
+  });
+
+  it('incrementa intentos al generar PIN', async () => {
+    const mockGenerate = vi.fn();
+    
+    mockUsePinAuth.mockReturnValue({
+      status: 'idle',
+      user: null,
+      generate: mockGenerate
+    });
+
+    const { result } = renderHook(() => useCustomAuth());
+
+    act(() => {
+      result.current.handleGenerate();
+    });
+
+    await waitFor(() => {
+      expect(result.current.attempts).toBe(1);
+    });
+    
+    expect(mockGenerate).toHaveBeenCalled();
+  });
+});
+```
+
+## Tests de Integración
+
+### Flujo Completo con MSW
+
+```typescript
+// test/integration/auth-flow.test.ts
+import { describe, it, expect } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { AuthProvider } from 'camarauth-sdk/react';
+import { http, HttpResponse } from 'msw';
+import { setupServer } from 'msw/node';
+
+const server = setupServer(
+  http.post('http://localhost:3001/register-pin', () => {
+    return HttpResponse.json({
+      success: true,
+      pinId: '123',
+      expiresIn: 180
+    });
+  }),
+  
+  http.post('http://localhost:3001/check-login', () => {
+    return HttpResponse.json({
+      success: true,
+      verified: true,
+      token: 'mock-jwt',
+      user: { id: '123', name: 'Test User' }
+    });
+  })
+);
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+describe('Auth Flow', () => {
+  it('flujo completo de autenticación', async () => {
+    render(
+      <AuthProvider apiUrl="http://localhost:3001">
+        <LoginPage />
+      </AuthProvider>
+    );
+
+    // Generar PIN
+    fireEvent.click(screen.getByText('Generar PIN'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/[A-Z0-9]{6}/)).toBeInTheDocument();
+    });
+
+    // Verificar autenticación
+    await waitFor(() => {
+      expect(screen.getByText(/Bienvenido/)).toBeInTheDocument();
+    });
+  });
+});
+```
+
+## Tests End-to-End
+
+### Setup con Playwright
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './e2e',
+  use: {
+    baseURL: 'http://localhost:5173',
+  },
+  webServer: [
+    {
+      command: 'npm run dev:backend',
+      url: 'http://localhost:3001/health',
+      timeout: 120000,
+    },
+    {
+      command: 'npm run dev:frontend',
+      url: 'http://localhost:5173',
+      timeout: 120000,
+    }
+  ]
+});
+```
+
+### Test E2E Completo
+
+```typescript
+// e2e/auth.spec.ts
+import { test, expect } from '@playwright/test';
+
+test('usuario completa flujo de autenticación', async ({ page }) => {
+  // 1. Ir a login
+  await page.goto('/login');
+
+  // 2. Generar PIN
+  await page.click('button:has-text("Generar PIN")');
+
+  // 3. Capturar PIN
+  await expect(page.locator('text=/[A-Z0-9]{6}/')).toBeVisible();
+  const pin = await page.locator('h1').textContent();
+
+  // 4. Simular webhook de WhatsApp
+  await fetch('http://localhost:3001/webhook/evolution', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      event: 'messages.upsert',
+      instance: 'test',
+      data: {
+        key: { remoteJid: '123@s.whatsapp.net', fromMe: false },
+        message: { conversation: pin?.match(/[A-Z0-9]{6}/)?.[0] }
+      }
+    })
+  });
+
+  // 5. Verificar autenticación
+  await expect(page.locator('text=Bienvenido')).toBeVisible({ timeout: 10000 });
+});
+```
+
+## Fixtures y Helpers
+
+### Fixtures Reutilizables
+
+```typescript
+// test/fixtures/user.ts
+import { User } from 'camarauth-sdk';
+
+export const mockUser: User = {
+  id: '123',
+  email: 'juan@example.com',
+  name: 'Juan Pérez',
+  firstName: 'Juan',
+  lastName: 'Pérez',
+  phone: '+34600123456',
+  avatar: 'https://example.com/avatar.jpg'
+};
+
+export const createMockUser = (overrides?: Partial<User>): User => ({
+  ...mockUser,
+  ...overrides
+});
+
+export const mockPinData = {
+  id: 'pin-123',
+  pin: 'ABC123',
+  emojiString: '🎉🔥✨',
+  status: 'pending' as const,
+  expiresAt: Date.now() + 180000,
+  createdAt: Date.now()
+};
+```
+
+### Helpers de Testing
+
+```typescript
+// test/helpers/auth.ts
+export async function simulatePinExpiration(
+  timeProvider: FakeTimeProvider,
+  minutes: number = 4
+) {
+  timeProvider.advance(minutes * 60 * 1000);
+  await new Promise(resolve => setTimeout(resolve, 100));
+}
+
+export async function simulateWhatsAppMessage(
+  pin: string,
+  phoneNumber: string = '+34600123456'
+) {
+  await fetch('http://localhost:3001/webhook/evolution', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      event: 'messages.upsert',
+      instance: 'test',
+      data: {
+        key: { remoteJid: `${phoneNumber}@s.whatsapp.net`, fromMe: false },
+        message: { conversation: pin }
+      }
+    })
+  });
+}
+```
+
+## Mejores Prácticas
+
+### ✅ Hacer
+
+- ✅ Aislar tests - cada test debe ser independiente
+- ✅ Limpiar mocks en `beforeEach`
+- ✅ Usar `FakeTimeProvider` para tests deterministas
+- ✅ Cerrar conexiones en `afterAll`
+- ✅ Mock de localStorage en Node.js
+- ✅ Usar MSW para interceptar requests HTTP
+
+### ❌ Evitar
+
+- ❌ No compartir estado entre tests
+- ❌ No olvidar limpiar después de tests de WebSocket
+- ❌ No usar timers reales en tests
+- ❌ No hardcodear puertos en tests paralelos
+
+## Ejecutar Tests
+
+```bash
+# Todos los tests
+npm test
+
+# Tests en watch mode
+npm run test:watch
+
+# Tests con coverage
+npm run test:coverage
+
+# Tests específicos
+npm test -- test/backend/register.test.ts
+
+# Tests E2E
+npm run test:e2e
+```
+
+## Referencias
+
+- [Vitest Documentation](https://vitest.dev/)
+- [Testing Library](https://testing-library.com/)
+- [MSW (Mock Service Worker)](https://mswjs.io/)
+- [Playwright](https://playwright.dev/)

@@ -1,0 +1,161 @@
+---
+title: "Instalación"
+description: "Guía de instalación del SDK de backend"
+---
+
+# Instalación
+
+## Requisitos
+
+- Node.js 18 o superior
+- npm, yarn o pnpm
+- Cuenta en Evolution API (o instancia propia)
+
+## Instalación del SDK
+
+```bash
+npm install @camarauth/sdk
+```
+
+## Instalación de dependencias adicionales
+
+Si necesitas usar PostgreSQL para persistencia:
+
+```bash
+npm install pg
+npm install -D @types/pg
+```
+
+Para TypeScript:
+
+```bash
+npm install -D typescript ts-node @types/node
+```
+
+## Configuración de TypeScript
+
+Crea un archivo `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+```
+
+## Configuración de variables de entorno
+
+Crea un archivo `.env`:
+
+```bash
+# Servidor
+PORT=3001
+HOST=0.0.0.0
+
+# Seguridad
+JWT_SECRET=tu-secreto-super-seguro-minimo-32-caracteres
+
+# Evolution API
+EVOLUTION_API_URL=https://tu-evolution-api.com
+EVOLUTION_API_KEY=tu-api-key-aqui
+EVOLUTION_INSTANCE_NAME=mi-instancia
+
+# Configuración
+PIN_EXPIRATION_MINUTES=3
+CORS_ORIGINS=http://localhost:5173,https://tu-app.com
+
+# Base de datos (opcional)
+DATABASE_URL=postgresql://user:pass@localhost:5432/camarauth
+```
+
+<Warning>
+  ¡Nunca comitees el archivo `.env`! Agrégalo a tu `.gitignore`.
+</Warning>
+
+## Estructura del proyecto
+
+```
+camarauth-server/
+├── src/
+│   ├── index.ts
+│   └── types.d.ts
+├── .env
+├── .env.example
+├── .gitignore
+├── package.json
+└── tsconfig.json
+```
+
+## Primer servidor
+
+Crea `src/index.ts`:
+
+```typescript
+import { CamarauthBackend } from '@camarauth/sdk/server';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const backend = new CamarauthBackend({
+  port: parseInt(process.env.PORT || '3001'),
+  host: process.env.HOST || '0.0.0.0',
+  jwtSecret: process.env.JWT_SECRET!,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+  pinExpirationMinutes: parseInt(process.env.PIN_EXPIRATION_MINUTES || '3'),
+  corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:5173']
+});
+
+backend.start();
+```
+
+## Ejecutar
+
+```bash
+# Desarrollo
+npx ts-node src/index.ts
+
+# Producción
+npm run build
+npm start
+```
+
+## Scripts de package.json
+
+```json
+{
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  }
+}
+```
+
+## Verificación
+
+Abre tu navegador en `http://localhost:3001/health`:
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "activePins": 0,
+  "instance": "mi-instancia"
+}
+```
+
+¡Listo! Tu servidor está corriendo.

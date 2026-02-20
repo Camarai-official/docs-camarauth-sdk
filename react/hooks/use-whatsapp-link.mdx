@@ -1,0 +1,76 @@
+---
+title: "useWhatsAppLink"
+description: "Documentación del hook useWhatsAppLink"
+---
+
+# useWhatsAppLink
+
+Hook para generar links directos a WhatsApp.
+
+## Uso Básico
+
+```typescript
+import { useWhatsAppLink } from 'camarauth-sdk/react';
+
+function WhatsAppButton() {
+  const { generateLink, generatePinLink } = useWhatsAppLink('+34600123456');
+
+  const messageLink = generateLink('Hola, tengo una pregunta');
+  const pinLink = generatePinLink('ABC123', ['🎉', '🔥', '✨']);
+
+  return (
+    <div>
+      <a href={messageLink} target="_blank" rel="noopener noreferrer">
+        Enviar mensaje personalizado
+      </a>
+      <a href={pinLink} target="_blank" rel="noopener noreferrer">
+        Enviar PIN por WhatsApp
+      </a>
+    </div>
+  );
+}
+```
+
+## Parámetros
+
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `phoneNumber` | `string` | Número de teléfono (con o sin +) |
+
+## Retorno
+
+| Propiedad | Tipo | Descripción |
+|-----------|------|-------------|
+| `generateLink` | `(message?: string) => string` | Generar link con mensaje opcional |
+| `generatePinLink` | `(pin: string, emojis: string[]) => string` | Generar link con PIN |
+
+## Ejemplos
+
+### Soporte al Cliente
+
+```typescript
+function CustomerSupport() {
+  const supportLink = useWhatsAppLink('+34123456789');
+
+  const links = {
+    sales: supportLink.generateLink('Hola, quiero información sobre sus productos'),
+    support: supportLink.generateLink('Hola, tengo un problema técnico'),
+    billing: supportLink.generateLink('Hola, tengo una duda sobre mi factura')
+  };
+
+  return (
+    <div>
+      <h2>Contactar con nosotros</h2>
+      <a href={links.sales}>💼 Ventas</a>
+      <a href={links.support}>🔧 Soporte técnico</a>
+      <a href={links.billing}>💳 Facturación</a>
+    </div>
+  );
+}
+```
+
+## Notas
+
+- El número de teléfono se limpia automáticamente (se eliminan espacios y el símbolo +)
+- Los mensajes se codifican automáticamente para URLs
+- Funciona tanto en móvil como en desktop

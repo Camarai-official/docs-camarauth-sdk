@@ -1,0 +1,165 @@
+---
+title: "Emoji Encoder"
+description: "Codificación de texto en emojis"
+---
+
+# Emoji Encoder
+
+Sistema de codificación que oculta texto dentro de emojis usando variation selectors.
+
+## ¿Cómo funciona?
+
+Los emojis pueden llevar "variation selectors" invisibles que modifican su apariencia. Aprovechamos esto para:
+
+1. Tomar un emoji base (ej: 😀)
+2. Agregar variation selectors que codifican caracteres
+3. El resultado parece un emoji normal pero contiene datos ocultos
+
+## encodeTextToEmojis
+
+Codifica texto dentro de un emoji.
+
+```typescript
+function encodeTextToEmojis(baseEmoji: string, text: string): string
+```
+
+### Ejemplos
+
+```typescript
+import { encodeTextToEmojis } from '@camarauth/sdk';
+
+// Codificar 'A' en 😀
+const encoded1 = encodeTextToEmojis('😀', 'A');
+console.log(encoded1); // "😀󠄀" (emoji + variante invisible)
+
+// Codificar 'Hola'
+const encoded2 = encodeTextToEmojis('🎉', 'Hola');
+console.log(encoded2); // "🎉󠄈󠄎󠄋󠄁"
+
+// En WhatsApp se ve como: 🎉 (pero contiene "Hola")
+```
+
+## decodeEmojiChunk
+
+Decodifica un emoji con variation selectors.
+
+```typescript
+function decodeEmojiChunk(chunk: string): string | null
+```
+
+### Ejemplos
+
+```typescript
+import { decodeEmojiChunk } from '@camarauth/sdk';
+
+const encoded = encodeTextToEmojis('😀', 'A');
+const decoded = decodeEmojiChunk(encoded);
+console.log(decoded); // "A"
+
+// Si no tiene datos
+const empty = decodeEmojiChunk('😀');
+console.log(empty); // null
+```
+
+## decodeEmojisFull
+
+Decodifica un string completo de emojis.
+
+```typescript
+function decodeEmojisFull(emojiString: string): string
+```
+
+### Ejemplos
+
+```typescript
+import { decodeEmojisFull } from '@camarauth/sdk';
+
+// El usuario envía estos emojis por WhatsApp
+const userMessage = "🔐🔑🔒🔓🗝️🛡️";
+
+// Decodificar
+const pin = decodeEmojisFull(userMessage);
+console.log(pin); // "ABC123"
+
+// Si el usuario envia texto plano
+const plain = decodeEmojisFull("PIN: ABC123");
+console.log(plain); // "ABC123" (extrae automáticamente)
+```
+
+## Flujo completo
+
+```typescript
+import { 
+  generatePin, 
+  encodePinToEmojis, 
+  decodeEmojisFull 
+} from '@camarauth/sdk';
+
+// 1. Generar PIN
+const pin = generatePin();
+console.log(pin); // "ABC123"
+
+// 2. Codificar en emojis
+const emojis = encodePinToEmojis(pin);
+console.log(emojis); // ["🔐", "🔑", "🔒", "🔓", "🗝️", "🛡️"]
+
+// 3. Enviar a WhatsApp
+const message = `PIN: ${emojis.join('')}`;
+// El usuario envía: "PIN: 🔐🔑🔒🔓🗝️🛡️"
+
+// 4. Recibir y decodificar (en webhook)
+const receivedMessage = "PIN: 🔐🔑🔒🔓🗝️🛡️";
+const decodedPin = decodeEmojisFull(receivedMessage);
+console.log(decodedPin); // "ABC123"
+
+// 5. Verificar
+if (decodedPin === pin) {
+  console.log('¡PIN correcto!');
+}
+```
+
+## Características
+
+- ✅ **Invisible**: Los variation selectors no se ven
+- ✅ **Compatible**: Funciona en WhatsApp, Telegram, etc.
+- ✅ **Seguro**: No altera el emoji base
+- ✅ **Compacto**: Un emoji = un carácter
+
+## Limitaciones
+
+- Cada emoji puede codificar un carácter
+- Algunos caracteres especiales pueden no codificarse bien
+- El orden de los emojis importa
+
+## Casos de uso
+
+### Autenticación por WhatsApp
+
+```typescript
+// Backend genera PIN
+const pin = generatePin();
+const emojis = encodePinToEmojis(pin);
+
+// Muestra al usuario: "Envía estos emojis: 🔐🔑🔒"
+// Usuario los copia y pega en WhatsApp
+
+// Backend recibe webhook y decodifica
+const decoded = decodeEmojisFull(receivedEmojis);
+```
+
+### Mensajes secretos
+
+```typescript
+// Codificar mensaje
+const secret = encodeTextToEmojis('🎁', 'Hola mundo');
+// Se ve como: 🎁 (pero contiene "Hola mundo")
+
+// Decodificar
+const message = decodeEmojiChunk(secret);
+console.log(message); // "Hola mundo"
+```
+
+## Véase también
+
+- [Pin Generator](/core/pin-generator)
+- [Core Overview](/core/overview)

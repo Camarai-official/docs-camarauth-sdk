@@ -1,0 +1,97 @@
+---
+title: "Java SDK"
+description: "Documentación del SDK de Java para Camarauth"
+---
+
+# Java SDK
+
+🚧 **En desarrollo**
+
+El SDK de Java para Camarauth está actualmente en desarrollo.
+
+## Estado del proyecto
+
+- [ ] Estructura base del proyecto Maven/Gradle
+- [ ] Spring Boot integration
+- [ ] WebFlux para reactive
+- [ ] WebSocket con Spring
+- [ ] Integración con Evolution API
+- [ ] JWT con java-jwt
+- [ ] Tests JUnit
+- [ ] Documentación
+
+## Características planeadas
+
+- **Spring Boot**: Starter para fácil integración
+- **WebFlux**: Programación reactiva
+- **Jakarta EE**: Soporte para Jakarta EE
+- **WebSocket**: Spring WebSocket
+- **Webhooks**: Manejo de webhooks Evolution
+- **JWT**: auth0/java-jwt
+- **JPA**: Soporte para múltiples bases de datos
+- **Maven/Gradle**: Soporte para ambos build tools
+
+## Estructura propuesta
+
+```java
+// Ejemplo de uso futuro con Spring Boot
+@SpringBootApplication
+public class Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+}
+
+@Configuration
+public class CamarauthConfig {
+    
+    @Bean
+    public CamarauthBackend camarauthBackend() {
+        return CamarauthBackend.builder()
+            .port(3001)
+            .jwtSecret("tu-secreto")
+            .evolutionApiUrl("https://api.evolution.com")
+            .evolutionApiKey("tu-api-key")
+            .evolutionInstanceName("mi-instancia")
+            .build();
+    }
+}
+```
+
+## Dependencia Maven
+
+```xml
+<!-- Próximamente... -->
+<dependency>
+    <groupId>com.camarauth</groupId>
+    <artifactId>camarauth-sdk</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+## Dependencia Gradle
+
+```groovy
+// Próximamente...
+implementation 'com.camarauth:camarauth-sdk:1.0.0'
+```
+
+## Contribuir
+
+¿Quieres ayudar con el desarrollo del SDK de Java?
+
+1. Revisa nuestro [GitHub](https://github.com/camarauth/camarauth-sdk-java)
+2. Únete a nuestra comunidad en Discord
+3. Abre un issue o pull request
+
+## Roadmap
+
+- **Alpha**: Q3 2025
+- **Beta**: Q4 2025
+- **Release**: Q4 2025
+
+---
+
+<Note>
+  Suscríbete a nuestras notificaciones para estar al tanto del lanzamiento del SDK de Java.
+</Note>

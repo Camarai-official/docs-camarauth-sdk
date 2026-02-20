@@ -1,0 +1,215 @@
+---
+title: "PostgreSQL Adapter"
+description: "Adaptador de base de datos para PostgreSQL, MySQL y SQLite"
+---
+
+# PostgreSQLAdapter
+
+Adaptador para bases de datos SQL relacionales (PostgreSQL, MySQL, SQLite).
+
+## Instalación
+
+```bash
+# Para PostgreSQL
+npm install @camarauth/sdk pg
+
+# Para MySQL
+npm install @camarauth/sdk mysql2
+
+# Para SQLite
+npm install @camarauth/sdk better-sqlite3
+```
+
+## Uso básico
+
+```typescript
+import { CamarauthBackend, PostgreSQLAdapter } from "@camarauth/sdk/server";
+import { Pool } from "pg";
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+const adapter = new PostgreSQLAdapter(pool);
+
+const backend = new CamarauthBackend({
+  port: 3001,
+  evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+  evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+  evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+  database: adapter,
+});
+```
+
+## Opciones de configuración
+
+```typescript
+interface PostgreSQLOptions {
+  // Prefijo para tablas de Camarauth (opcional)
+  tablePrefix?: string;
+
+  // Nombre de tu tabla de usuarios existente
+  userTable?: string;
+
+  // Mapeo de columnas
+  userIdColumn?: string; // default: 'id'
+  userNameColumn?: string; // default: 'name'
+  userLastnameColumn?: string; // default: 'surname'
+  userPhoneColumn?: string; // default: 'phone'
+  userEmailColumn?: string; // default: 'email'
+  userStatusColumn?: string; // default: 'estado'
+
+  // Tablas adicionales
+  rolesTable?: string;
+  sessionTable?: string;
+  verificationTable?: string;
+}
+```
+
+## Ejemplo con tabla existente
+
+```typescript
+const adapter = new PostgreSQLAdapter(pool, {
+  tablePrefix: "camarauth_",
+  userTable: "customers", // Tu tabla existente
+  userIdColumn: "customer_id", // Tu columna ID
+  userNameColumn: "first_name", // Tu columna de nombre
+  userLastnameColumn: "last_name", // Tu columna de apellido
+  userPhoneColumn: "phone_number", // Tu columna de teléfono
+  userEmailColumn: "email_address", // Tu columna de email
+  userStatusColumn: "account_status",
+});
+```
+
+## Esquema SQL
+
+### Tabla de usuarios (usa tu tabla existente)
+
+```sql
+-- Tu tabla existente
+CREATE TABLE customers (
+  customer_id SERIAL PRIMARY KEY,
+  first_name VARCHAR(255),
+  last_name VARCHAR(255),
+  phone_number VARCHAR(20) UNIQUE,
+  email_address VARCHAR(255),
+  account_status VARCHAR(20) DEFAULT 'active'
+);
+```
+
+### Tablas de Camarauth (se crean automáticamente)
+
+```sql
+-- Tabla de sesiones
+CREATE TABLE camarauth_sessions (
+  user_id INTEGER PRIMARY KEY REFERENCES customers(customer_id),
+  refresh_token TEXT NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla de roles (opcional)
+CREATE TABLE camarauth_roles (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES customers(customer_id),
+  role_name VARCHAR(50) NOT NULL,
+  status VARCHAR(20) DEFAULT 'active'
+);
+
+-- Tabla de códigos de verificación (opcional)
+CREATE TABLE camarauth_verification_codes (
+  code VARCHAR(10) PRIMARY KEY,
+  user_id INTEGER,
+  phone_number VARCHAR(20),
+  status VARCHAR(20) DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  expires_at TIMESTAMP
+);
+
+-- Índices
+CREATE INDEX idx_camarauth_sessions_user ON camarauth_sessions(user_id);
+CREATE INDEX idx_camarauth_roles_user ON camarauth_roles(user_id);
+CREATE INDEX idx_camarauth_codes_phone ON camarauth_verification_codes(phone_number);
+```
+
+## Métodos
+
+### migrate()
+
+Crea las tablas necesarias automáticamente.
+
+```typescript
+await adapter.migrate();
+```
+
+### findUserByPhone()
+
+```typescript
+const user = await adapter.findUserByPhone("+1234567890");
+// Retorna: User | null
+```
+
+### createUser()
+
+```typescript
+const user = await adapter.createUser({
+  name: "Juan",
+  surname: "Pérez",
+  phone: "+1234567890",
+});
+```
+
+### saveSession()
+
+```typescript
+await adapter.saveSession("123", "refresh-token-xyz");
+```
+
+### getSession()
+
+```typescript
+const session = await adapter.getSession("123");
+```
+
+## Ejemplo completo
+
+```typescript
+import { CamarauthBackend, PostgreSQLAdapter } from "@camarauth/sdk/server";
+import { Pool } from "pg";
+
+async function main() {
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+  });
+
+  const adapter = new PostgreSQLAdapter(pool, {
+    userTable: "users",
+    userIdColumn: "id",
+    userNameColumn: "name",
+    userPhoneColumn: "phone",
+  });
+
+  // Crear tablas si no existen
+  await adapter.migrate();
+
+  const backend = new CamarauthBackend({
+    port: 3001,
+    jwtSecret: process.env.JWT_SECRET!,
+    evolutionApiUrl: process.env.EVOLUTION_API_URL!,
+    evolutionApiKey: process.env.EVOLUTION_API_KEY!,
+    evolutionInstanceName: process.env.EVOLUTION_INSTANCE_NAME!,
+    database: adapter,
+  });
+
+  backend.start();
+}
+
+main();
+```
+
+## Véase también
+
+- [DatabaseAdapter interface](/backend/database-adapter)
+- [MongoDB Adapter](/backend/adapters/mongodb)
+- [Redis Adapter](/backend/adapters/redis)

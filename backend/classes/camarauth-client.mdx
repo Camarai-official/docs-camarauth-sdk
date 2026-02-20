@@ -1,0 +1,271 @@
+---
+title: "CamarauthClient"
+description: "Cliente HTTP para comunicarse con el backend de Camarauth"
+---
+
+# CamarauthClient
+
+Cliente HTTP para interactuar con el backend de Camarauth desde aplicaciones Node.js.
+
+## Constructor
+
+```typescript
+constructor(config: {
+  apiUrl: string;
+  httpClient?: HttpClient;
+})
+```
+
+### Parámetros
+
+<ParamField path="config.apiUrl" type="string" required>
+  URL base de la API de Camarauth
+</ParamField>
+
+<ParamField path="config.httpClient" type="HttpClient">
+  Cliente HTTP personalizado (opcional)
+</ParamField>
+
+### Ejemplo
+
+```typescript
+import { CamarauthClient } from "@camarauth/sdk";
+
+const client = new CamarauthClient({
+  apiUrl: "http://localhost:3001",
+});
+```
+
+## Métodos
+
+### registerPin()
+
+Registra un nuevo PIN en el backend.
+
+```typescript
+async registerPin(pin: string): Promise<RegisterPinResponse>
+```
+
+#### Parámetros
+
+<ParamField path="pin" type="string" required>
+  PIN a registrar
+</ParamField>
+
+#### Retorna
+
+<ResponseField name="success" type="boolean">
+  Indica si el registro fue exitoso
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Mensaje descriptivo
+</ResponseField>
+
+#### Ejemplo
+
+```typescript
+const response = await client.registerPin("ABC123");
+console.log(response.success); // true
+```
+
+### checkLogin()
+
+Verifica si un PIN ha sido autenticado.
+
+```typescript
+async checkLogin(pin: string): Promise<AuthResponse>
+```
+
+#### Parámetros
+
+<ParamField path="pin" type="string" required>
+  PIN a verificar
+</ParamField>
+
+#### Retorna
+
+<ResponseField name="success" type="boolean">
+  Indica si la operación fue exitosa
+</ResponseField>
+
+<ResponseField name="verified" type="boolean">
+  Indica si el PIN fue verificado
+</ResponseField>
+
+<ResponseField name="token" type="string">
+  Token JWT de acceso (si está verificado)
+</ResponseField>
+
+<ResponseField name="user" type="User">
+  Datos del usuario (si está verificado)
+</ResponseField>
+
+#### Ejemplo
+
+```typescript
+const response = await client.checkLogin("ABC123");
+
+if (response.verified) {
+  console.log("Token:", response.token);
+  console.log("Usuario:", response.user);
+} else {
+  console.log("Login pendiente...");
+}
+```
+
+### refreshToken()
+
+Refresca el token de acceso usando el refresh token.
+
+```typescript
+async refreshToken(refreshToken: string): Promise<{
+  token: string;
+  refreshToken: string;
+}>
+```
+
+#### Parámetros
+
+<ParamField path="refreshToken" type="string" required>
+  Refresh token válido
+</ParamField>
+
+#### Ejemplo
+
+```typescript
+const { token, refreshToken } = await client.refreshToken(storedRefreshToken);
+
+// Guardar nuevos tokens
+localStorage.setItem("token", token);
+localStorage.setItem("refreshToken", refreshToken);
+```
+
+### getProfile()
+
+Obtiene el perfil del usuario autenticado.
+
+```typescript
+async getProfile(accessToken: string): Promise<User>
+```
+
+#### Parámetros
+
+<ParamField path="accessToken" type="string" required>
+  Token JWT de acceso
+</ParamField>
+
+#### Retorna
+
+<ResponseField name="id" type="string">
+  ID del usuario
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Nombre del usuario
+</ResponseField>
+
+<ResponseField name="phone" type="string">
+  Teléfono del usuario
+</ResponseField>
+
+<ResponseField name="roles" type="string[]">
+  Roles del usuario
+</ResponseField>
+
+#### Ejemplo
+
+```typescript
+const user = await client.getProfile(accessToken);
+console.log(`Hola, ${user.name}!`);
+```
+
+### logout()
+
+Cierra la sesión del usuario.
+
+```typescript
+async logout(
+  accessToken: string,
+  userId: string
+): Promise<{ success: boolean }>
+```
+
+#### Parámetros
+
+<ParamField path="accessToken" type="string" required>
+  Token JWT de acceso
+</ParamField>
+
+<ParamField path="userId" type="string" required>
+  ID del usuario
+</ParamField>
+
+#### Ejemplo
+
+```typescript
+await client.logout(token, userId);
+// Limpiar storage
+localStorage.removeItem("token");
+```
+
+## Ejemplo completo
+
+```typescript
+import { CamarauthClient } from "@camarauth/sdk";
+
+class AuthService {
+  private client: CamarauthClient;
+  private token: string | null = null;
+  private refreshToken: string | null = null;
+
+  constructor() {
+    this.client = new CamarauthClient({
+      apiUrl: process.env.CAMARAUTH_API_URL!,
+    });
+  }
+
+  async initiateLogin(pin: string): Promise<void> {
+    // Registrar PIN
+    await this.client.registerPin(pin);
+
+    // Polling hasta que el usuario verifique
+    const checkInterval = setInterval(async () => {
+      const response = await this.client.checkLogin(pin);
+
+      if (response.verified) {
+        clearInterval(checkInterval);
+        this.token = response.token!;
+        this.refreshToken = response.refreshToken!;
+
+        // Guardar tokens
+        localStorage.setItem("token", this.token);
+        localStorage.setItem("refreshToken", this.refreshToken);
+      }
+    }, 2000);
+  }
+
+  async getUserProfile(): Promise<User> {
+    if (!this.token) {
+      throw new Error("No autenticado");
+    }
+    return this.client.getProfile(this.token);
+  }
+
+  async logout(userId: string): Promise<void> {
+    if (this.token) {
+      await this.client.logout(this.token, userId);
+    }
+    this.token = null;
+    this.refreshToken = null;
+    localStorage.removeItem("token");
+    localStorage.removeItem("refreshToken");
+  }
+}
+```
+
+## Véase también
+
+- [AuthResponse interface](/backend/interfaces/auth-response)
+- [User interface](/backend/interfaces/user)
+- [CamarauthBackend class](/backend/classes/camarauth-backend)

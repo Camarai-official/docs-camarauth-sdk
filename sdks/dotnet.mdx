@@ -1,0 +1,80 @@
+---
+title: ".NET SDK"
+description: "Documentación del SDK de .NET para Camarauth"
+---
+
+# .NET SDK
+
+🚧 **En desarrollo**
+
+El SDK de .NET para Camarauth está actualmente en desarrollo.
+
+## Estado del proyecto
+
+- [ ] Estructura base del proyecto
+- [ ] ASP.NET Core integration
+- [ ] SignalR para WebSockets
+- [ ] Integración con Evolution API
+- [ ] JWT con System.IdentityModel.Tokens.Jwt
+- [ ] Tests xUnit
+- [ ] Documentación
+
+## Características planeadas
+
+- **ASP.NET Core**: Middleware para fácil integración
+- **SignalR**: WebSockets en tiempo real
+- **Dependency Injection**: Soporte nativo de DI
+- **Configuration**: appsettings.json support
+- **Webhooks**: Manejo de webhooks Evolution
+- **JWT**: System.IdentityModel.Tokens.Jwt
+- **Entity Framework**: Soporte para múltiples bases de datos
+- **NuGet**: Distribución via NuGet
+
+## Estructura propuesta
+
+```csharp
+// Ejemplo de uso futuro
+using Camarauth.SDK;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCamarauth(options =>
+{
+    options.Port = 3001;
+    options.JwtSecret = "tu-secreto";
+    options.EvolutionApiUrl = "https://api.evolution.com";
+    options.EvolutionApiKey = "tu-api-key";
+    options.EvolutionInstanceName = "mi-instancia";
+});
+
+var app = builder.Build();
+app.UseCamarauth();
+app.Run();
+```
+
+## Instalación
+
+```bash
+# Próximamente...
+dotnet add package Camarauth.SDK
+```
+
+## Contribuir
+
+¿Quieres ayudar con el desarrollo del SDK de .NET?
+
+1. Revisa nuestro [GitHub](https://github.com/camarauth/camarauth-sdk-dotnet)
+2. Únete a nuestra comunidad en Discord
+3. Abre un issue o pull request
+
+## Roadmap
+
+- **Alpha**: Q4 2025
+- **Beta**: Q1 2026
+- **Release**: Q1 2026
+
+---
+
+<Note>
+  Suscríbete a nuestras notificaciones para estar al tanto del lanzamiento del SDK de .NET.
+</Note>

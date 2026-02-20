@@ -1,0 +1,14 @@
+{
+  "name": "camarauth-sdk-docs",
+  "version": "1.0.0",
+  "description": "Documentación oficial del SDK de Camarauth",
+  "scripts": {
+    "dev": "mintlify dev",
+    "build": "npx mintlify validate",
+    "validate": "npx mintlify validate",
+    "check:links": "npx mintlify broken-links"
+  },
+  "dependencies": {
+    "mintlify": "^4.2.367"
+  }
+}

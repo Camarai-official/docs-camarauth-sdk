@@ -1,0 +1,141 @@
+---
+title: "JWT Utils"
+description: "Utilidades para manejo de tokens JWT"
+---
+
+# JWT Utils
+
+Utilidades para trabajar con JSON Web Tokens (JWT) en Camarauth SDK.
+
+## Visión General
+
+El SDK proporciona funciones helper para:
+
+- Decodificar tokens
+- Verificar expiración
+- Extraer información del usuario
+
+## Decodificar Token
+
+```typescript
+import { decodeToken } from 'camarauth-sdk';
+
+const token = 'eyJhbGciOiJIUzI1NiIs...';
+const payload = decodeToken(token);
+
+console.log(payload);
+// {
+//   userId: '123',
+//   name: 'Juan',
+//   roles: ['user'],
+//   iat: 1234567890,
+//   exp: 1234567950
+// }
+```
+
+## Verificar Expiración
+
+```typescript
+import { isTokenExpired } from 'camarauth-sdk';
+
+const token = 'eyJhbGciOiJIUzI1NiIs...';
+
+if (isTokenExpired(token)) {
+  console.log('Token expirado');
+  // Usar refresh token
+} else {
+  console.log('Token válido');
+}
+```
+
+## Obtener Usuario del Token
+
+```typescript
+import { getUserFromToken } from 'camarauth-sdk';
+
+const token = 'eyJhbGciOiJIUzI1NiIs...';
+const user = getUserFromToken(token);
+
+console.log(user);
+// {
+//   id: '123',
+//   name: 'Juan',
+//   email: 'juan@example.com',
+//   roles: ['user']
+// }
+```
+
+## Funciones Disponibles
+
+| Función | Descripción |
+|---------|-------------|
+| `decodeToken(token)` | Decodifica un JWT (sin verificar firma) |
+| `isTokenExpired(token)` | Verifica si el token ha expirado |
+| `getUserFromToken(token)` | Extrae datos del usuario del payload |
+
+## Estructura del Token
+
+Los tokens JWT en Camarauth tienen esta estructura:
+
+```typescript
+interface JWTPayload {
+  // Datos del usuario
+  userId: string;
+  name: string;
+  email?: string;
+  roles: string[];
+  
+  // Metadatos
+  iat: number;    // Issued at (timestamp)
+  exp: number;    // Expiration (timestamp)
+  iss: string;    // Issuer (camarauth)
+  aud: string;    // Audience (camarauth-client)
+  jti?: string;   // JWT ID (para refresh tokens)
+}
+```
+
+## Refresh Token
+
+Los refresh tokens tienen una estructura diferente:
+
+```typescript
+interface RefreshTokenPayload {
+  userId: string;
+  type: 'refresh';
+  jti: string;      // ID único del token
+  iat: number;
+  exp: number;      // Expira en 7 días
+}
+```
+
+## Uso en Autenticación
+
+```typescript
+import { getUserFromToken, isTokenExpired } from 'camarauth-sdk';
+
+// Al cargar la aplicación
+const token = localStorage.getItem('token');
+
+if (token && !isTokenExpired(token)) {
+  const user = getUserFromToken(token);
+  // Usuario autenticado
+  setUser(user);
+} else {
+  // Token expirado o no existe
+  // Intentar refresh o redirigir a login
+}
+```
+
+## Notas de Seguridad
+
+<Info>
+Estas utilidades **solo decodifican** el token, no verifican la firma. La verificación de firma debe hacerse en el servidor.
+</Info>
+
+```typescript
+// ❌ No verifica firma (client-side)
+const payload = decodeToken(token);
+
+// ✅ Verifica firma (server-side)
+const payload = jwt.verify(token, secret);
+```

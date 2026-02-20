@@ -1,0 +1,150 @@
+---
+title: "Códigos de Error"
+description: "Referencia de códigos de error"
+---
+
+# Códigos de Error
+
+Referencia completa de todos los códigos de error del SDK.
+
+## Errores del Backend
+
+### Errores de PIN
+
+| Código | HTTP | Descripción | Solución |
+|--------|------|-------------|----------|
+| `PIN_NOT_FOUND` | 404 | PIN no existe o fue limpiado | Generar nuevo PIN |
+| `PIN_EXPIRED` | 410 | PIN expiró después de 3 minutos | Generar nuevo PIN |
+| `PIN_ALREADY_VERIFIED` | 409 | PIN ya fue utilizado | Generar nuevo PIN |
+| `INVALID_PIN_FORMAT` | 400 | Formato de PIN inválido | Verificar formato |
+
+### Errores de Autenticación
+
+| Código | HTTP | Descripción | Solución |
+|--------|------|-------------|----------|
+| `TOKEN_INVALID` | 401 | Token JWT inválido | Re-autenticar |
+| `TOKEN_EXPIRED` | 401 | Token JWT expirado | Usar refresh token |
+| `TOKEN_NOT_PROVIDED` | 401 | No se proporcionó token | Incluir header Authorization |
+| `REFRESH_TOKEN_INVALID` | 401 | Refresh token inválido | Re-autenticar |
+| `REFRESH_TOKEN_EXPIRED` | 401 | Refresh token expirado | Re-autenticar |
+
+### Errores de Rate Limiting
+
+| Código | HTTP | Descripción | Solución |
+|--------|------|-------------|----------|
+| `RATE_LIMIT_EXCEEDED` | 429 | Demasiados requests | Esperar y reintentar |
+
+### Errores de Webhook
+
+| Código | HTTP | Descripción | Solución |
+|--------|------|-------------|----------|
+| `WEBHOOK_SIGNATURE_INVALID` | 401 | Firma de webhook inválida | Verificar WEBHOOK_SECRET |
+
+### Errores Generales
+
+| Código | HTTP | Descripción | Solución |
+|--------|------|-------------|----------|
+| `VALIDATION_ERROR` | 400 | Datos inválidos | Verificar request body |
+| `INTERNAL_ERROR` | 500 | Error interno del servidor | Contactar soporte |
+| `NETWORK_ERROR` | 503 | Error de red | Reintentar |
+
+## Errores del Cliente
+
+### Errores de Conexión
+
+| Código | Descripción | Solución |
+|--------|-------------|----------|
+| `SOCKET_ERROR` | Error de conexión WebSocket | Verificar conexión de red |
+| `PIN_GENERATION_FAILED` | Fallo al generar PIN | Reintentar |
+| `CONFIG_ERROR` | Error de configuración | Verificar configuración |
+| `SESSION_RESTORE_FAILED` | Fallo al restaurar sesión | Re-autenticar |
+| `NETWORK_ERROR` | Error de red | Verificar conexión |
+| `AUTHENTICATION_FAILED` | Fallo de autenticación | Reintentar |
+| `VALIDATION_ERROR` | Error de validación | Verificar inputs |
+| `TIMEOUT_ERROR` | Timeout de conexión | Reintentar |
+
+## Estructura de Errores
+
+### Backend
+
+```json
+{
+  "success": false,
+  "error": "Mensaje descriptivo",
+  "code": "PIN_EXPIRED",
+  "status": 410,
+  "details": {
+    "retryAfter": 60,
+    "expiresAt": "2024-01-01T00:03:00.000Z"
+  }
+}
+```
+
+### Cliente
+
+```typescript
+class CamarauthError extends Error {
+  code: string;           // 'PIN_EXPIRED'
+  message: string;        // 'PIN has expired'
+  statusCode?: number;    // 410
+}
+```
+
+## Manejo de Errores
+
+### Ejemplo: Manejo Completo
+
+```typescript
+import { CamarauthError } from 'camarauth-sdk';
+
+try {
+  await backend.registerPin(pin);
+} catch (error) {
+  if (error instanceof CamarauthError) {
+    switch (error.code) {
+      case 'PIN_EXPIRED':
+        showToast('Tu código ha expirado. Genera uno nuevo.');
+        regeneratePin();
+        break;
+        
+      case 'RATE_LIMIT_EXCEEDED':
+        const retryAfter = error.details?.retryAfter || 60;
+        showToast(`Demasiados intentos. Espera ${retryAfter} segundos.`);
+        break;
+        
+      case 'NETWORK_ERROR':
+        showToast('Sin conexión. Verifica tu red.');
+        break;
+        
+      default:
+        showToast('Ocurrió un error. Intenta de nuevo.');
+    }
+  }
+}
+```
+
+## Retry Automático
+
+Algunos errores son recuperables y se pueden reintentar:
+
+```typescript
+const retryableCodes = [
+  'NETWORK_ERROR',
+  'SOCKET_ERROR',
+  'TIMEOUT_ERROR',
+  'RATE_LIMIT_EXCEEDED'
+];
+
+async function withRetry(fn, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (!retryableCodes.includes(error.code) || i === maxRetries - 1) {
+        throw error;
+      }
+      await sleep(1000 * Math.pow(2, i));
+    }
+  }
+}
+```

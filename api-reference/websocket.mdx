@@ -1,0 +1,194 @@
+---
+title: "WebSocket Events"
+description: "Documentación de eventos WebSocket"
+---
+
+# WebSocket Events
+
+Camarauth SDK usa WebSockets para comunicación bidireccional en tiempo real entre el frontend y el backend.
+
+## Conexión
+
+```typescript
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3001', {
+  transports: ['websocket'],
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000
+});
+```
+
+## Cliente → Servidor
+
+### Registrar PIN
+
+```typescript
+socket.emit('register-pin', {
+  pin: 'ABC123',
+  emojiString: '😀😎🎉'
+});
+```
+
+Registra un PIN para escuchar autenticación.
+
+### Cancelar Autenticación
+
+```typescript
+socket.emit('cancel-auth', {
+  pin: 'ABC123'
+});
+```
+
+Cancela la autenticación en curso.
+
+## Servidor → Cliente
+
+### PIN Registrado
+
+```typescript
+socket.on('pin-registered', (data) => {
+  console.log('PIN registrado:', data);
+  // {
+  //   success: true,
+  //   pinId: 'abc123',
+  //   expiresIn: 180
+  // }
+});
+```
+
+Confirmación de registro exitoso.
+
+### Autenticación Exitosa
+
+```typescript
+socket.on('auth-success', (data) => {
+  console.log('Autenticado:', data);
+  // {
+  //   success: true,
+  //   verified: true,
+  //   token: 'eyJhbGciOiJIUzI1NiIs...',
+  //   refreshToken: 'eyJhbGciOiJIUzI1NiIs...',
+  //   user: {
+  //     id: '123',
+  //     name: 'Juan',
+  //     phone: '+1234567890'
+  //   }
+  // }
+});
+```
+
+Autenticación exitosa con tokens JWT.
+
+### PIN Expirado
+
+```typescript
+socket.on('pin-expired', () => {
+  console.log('El PIN ha expirado');
+  // Mostrar mensaje al usuario
+  // Ofrecer generar nuevo PIN
+});
+```
+
+El PIN ha expirado después de 3 minutos.
+
+### Error
+
+```typescript
+socket.on('pin-error', (data) => {
+  console.error('Error:', data);
+  // {
+  //   error: 'Mensaje de error',
+  //   code: 'ERROR_CODE',
+  //   status: 400
+  // }
+});
+```
+
+Error en el proceso de autenticación.
+
+### Autenticación Cancelada
+
+```typescript
+socket.on('auth-cancelled', () => {
+  console.log('Autenticación cancelada');
+});
+```
+
+Confirmación de cancelación.
+
+## Ejemplo Completo
+
+```typescript
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3001');
+
+// Eventos de conexión
+socket.on('connect', () => {
+  console.log('Conectado al servidor');
+});
+
+socket.on('disconnect', () => {
+  console.log('Desconectado del servidor');
+});
+
+socket.on('connect_error', (error) => {
+  console.error('Error de conexión:', error);
+});
+
+// Eventos de autenticación
+socket.on('pin-registered', (data) => {
+  console.log('PIN registrado:', data.pinId);
+});
+
+socket.on('auth-success', (data) => {
+  console.log('Autenticado como:', data.user.name);
+  // Guardar tokens
+  localStorage.setItem('token', data.token);
+  // Redirigir al dashboard
+  window.location.href = '/dashboard';
+});
+
+socket.on('pin-expired', () => {
+  console.log('PIN expirado');
+  // Mostrar mensaje al usuario
+});
+
+socket.on('pin-error', (data) => {
+  console.error('Error:', data.error);
+});
+
+// Enviar PIN
+function registerPin(pin: string, emojiString: string) {
+  socket.emit('register-pin', { pin, emojiString });
+}
+
+// Cancelar
+function cancelAuth(pin: string) {
+  socket.emit('cancel-auth', { pin });
+}
+```
+
+## Reconexión Automática
+
+El cliente se reconecta automáticamente si la conexión se pierde:
+
+```typescript
+const socket = io('http://localhost:3001', {
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  randomizationFactor: 0.5
+});
+
+socket.on('reconnect', (attemptNumber) => {
+  console.log('Reconectado después de', attemptNumber, 'intentos');
+});
+
+socket.on('reconnect_error', (error) => {
+  console.error('Error al reconectar:', error);
+});
+```

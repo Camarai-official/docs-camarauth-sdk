@@ -1,0 +1,184 @@
+---
+title: "SDKs Overview"
+description: "Visión general de los SDKs disponibles para Camarauth"
+---
+
+# SDKs de Camarauth
+
+Camarauth proporciona SDKs oficiales para las plataformas más populares. Cada SDK está diseñado para facilitar la integración de autenticación por WhatsApp en tus aplicaciones.
+
+## SDKs disponibles
+
+<CardGroup cols={2}>
+  
+  <Card title="Node.js" icon="node" href="/sdks/nodejs">
+    **Disponible** ✅
+    
+    Backend completo con Express y Socket.IO. Incluye:
+    - Servidor HTTP/WebSocket
+    - Webhooks para Evolution API
+    - Gestión de PINs
+    - Tokens JWT
+    - Soporte para PostgreSQL
+    
+    ```bash
+    npm install @camarauth/sdk
+    ```
+  </Card>
+  
+  <Card title="React" icon="react" href="/sdks/react">
+    **Disponible** ✅
+    
+    Hooks y componentes para React. Incluye:
+    - `usePinAuth` - Hook principal
+    - `usePinGenerator` - Generación de PINs
+    - `useCountdown` - Temporizador
+    - `useAutoRegeneration` - Regeneración automática
+    
+    ```bash
+    npm install @camarauth/sdk
+    ```
+  </Card>
+  
+  <Card title="Python" icon="python" href="/sdks/python">
+    **Próximamente** 🚧
+    
+    Backend con FastAPI/Flask:
+    - Servidor ASGI/WSGI
+    - WebSocket support
+    - Webhooks
+    - Async/await
+    
+    ```bash
+    # pip install camarauth-sdk
+    # Próximamente...
+    ```
+  </Card>
+  
+  <Card title="Go" icon="golang" href="/sdks/go">
+    **Próximamente** 🚧
+    
+    Backend de alto rendimiento:
+    - Servidor HTTP nativo
+    - Goroutines para concurrencia
+    - WebSocket con gorilla/websocket
+    - Bajo consumo de recursos
+    
+    ```bash
+    # go get github.com/camarauth/sdk
+    # Próximamente...
+    ```
+  </Card>
+  
+  <Card title="Rust" icon="rust" href="/sdks/rust">
+    **Próximamente** 🚧
+    
+    Backend de máximo rendimiento:
+    - Actix-web o Axum
+    - Tokio para async
+    - Type-safe con Serde
+    - WebAssembly support
+    
+    ```bash
+    # cargo add camarauth-sdk
+    # Próximamente...
+    ```
+  </Card>
+  
+  <Card title="Java" icon="java" href="/sdks/java">
+    **Próximamente** 🚧
+    
+    Backend empresarial:
+    - Spring Boot integration
+    - WebFlux para reactive
+    - Jakarta EE support
+    - Maven y Gradle
+    
+    ```xml
+    <!-- Próximamente... -->
+    ```
+  </Card>
+  
+  <Card title=".NET" icon="csharp" href="/sdks/dotnet">
+    **Próximamente** 🚧
+    
+    Para el ecosistema Microsoft:
+    - ASP.NET Core
+    - SignalR para WebSockets
+    - NuGet package
+    - C# idiomatic
+    
+    ```bash
+    # dotnet add package Camarauth.SDK
+    # Próximamente...
+    ```
+  </Card>
+  
+  <Card title="PHP" icon="php" href="/sdks/php">
+    **Próximamente** 🚧
+    
+    Para aplicaciones PHP:
+    - Laravel integration
+    - Symfony bundle
+    - Composer package
+    - PSR standards
+    
+    ```bash
+    # composer require camarauth/sdk
+    # Próximamente...
+    ```
+  </Card>
+
+</CardGroup>
+
+## Arquitectura común
+
+Todos los SDKs siguen la misma arquitectura conceptual:
+
+```
+┌─────────────────────────────────────────────┐
+│              Frontend SDK                    │
+│  ┌─────────────┐    ┌─────────────────────┐ │
+│  │  PIN Generator│──▶│  WebSocket Client   │ │
+│  └─────────────┘    └─────────────────────┘ │
+│         │                   │               │
+│         ▼                   ▼               │
+│  ┌─────────────────────────────────────┐   │
+│  │  Auth Orchestrator (usePinAuth)    │   │
+│  └─────────────────────────────────────┘   │
+└─────────────────────────────────────────────┘
+                      │
+                      ▼ WebSocket/HTTP
+┌─────────────────────────────────────────────┐
+│              Backend SDK                     │
+│  ┌─────────────┐    ┌─────────────────────┐ │
+│  │  PIN Manager │    │  WebSocket Server   │ │
+│  └─────────────┘    └─────────────────────┘ │
+│         │                   │               │
+│         ▼                   ▼               │
+│  ┌─────────────┐    ┌─────────────────────┐ │
+│  │   JWT Utils │    │  Evolution Webhook  │ │
+│  └─────────────┘    └─────────────────────┘ │
+└─────────────────────────────────────────────┘
+```
+
+## Contribuir
+
+¿Quieres contribuir con un SDK para tu lenguaje favorito? 
+
+1. Revisa nuestra [guía de contribución](https://github.com/camarauth/camarauth-sdk/blob/main/CONTRIBUTING.md)
+2. Únete a nuestra [comunidad en Discord](https://discord.gg/camarauth)
+3. Abre un issue para discutir la implementación
+
+## Roadmap
+
+- **Q1 2025**: Python SDK
+- **Q2 2025**: Go SDK
+- **Q3 2025**: Rust SDK, Java SDK
+- **Q4 2025**: .NET SDK, PHP SDK
+
+## Soporte
+
+- 📧 Email: support@camarauth.com
+- 💬 Discord: [discord.gg/camarauth](https://discord.gg/camarauth)
+- 🐙 GitHub: [github.com/camarauth](https://github.com/camarauth)
